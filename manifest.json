@@ -1,7 +1,7 @@
 {
-  "name": "BIPA · Etiquetas QR",
-  "short_name": "BIPA QR",
-  "description": "Generador e impresión de etiquetas térmicas con código QR para Zebra ZD410 (USB OTG y RawBT).",
+  "name": "BIPA · Etiquetas de Lote",
+  "short_name": "BIPA Lotes",
+  "description": "Generador e impresión de etiquetas térmicas de lote BIPA (57 × 19 mm) para Zebra ZD410 vía USB OTG y RawBT.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

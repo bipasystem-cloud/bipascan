@@ -1,5 +1,5 @@
 /**
- * BIPA Etiquetas QR · Conexión WebUSB para Zebra ZD410 y respaldo RawBT
+ * BIPA Etiquetas de Lote · Conexión WebUSB para Zebra ZD410 y respaldo RawBT
  */
 (function (global) {
   'use strict';

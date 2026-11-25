@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>BIPA · Etiquetas QR (Zebra ZD410)</title>
-  <meta name="description" content="Generador e impresor de etiquetas térmicas con código QR para impresoras Zebra ZD410 vía USB OTG y RawBT. Productos BIPA.">
+  <title>BIPA · Etiquetas de Lote (Zebra ZD410)</title>
+  <meta name="description" content="Generador e impresor de etiquetas de lote térmicas BIPA (57 × 19 mm) para Zebra ZD410 vía USB OTG y RawBT.">
   <meta name="theme-color" content="#286A4D">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="BIPA QR">
+  <meta name="apple-mobile-web-app-title" content="BIPA Lotes">
 
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" href="./assets/favicon.png">
@@ -37,7 +37,7 @@
             >
           </div>
           <div class="brand-title-group">
-            <span class="brand-eyebrow">ETIQUETAS QR</span>
+            <span class="brand-eyebrow">ETIQUETAS DE LOTE</span>
             <h1 class="brand-title">Zebra ZD410</h1>
           </div>
         </div>
@@ -81,18 +81,18 @@
     </div>
 
     <main class="main-content">
-      <!-- 2. Vista previa en vivo de la etiqueta (siempre fondo blanco y tinta negra, interactiva) -->
+      <!-- 2. Vista previa en vivo de la etiqueta térmica (siempre fondo blanco y tinta negra) -->
       <section class="card preview-section" aria-labelledby="previewHeading">
         <div class="section-header">
           <div>
             <span class="section-eyebrow">VISTA PREVIA EN VIVO</span>
             <h2 id="previewHeading" class="section-title">Etiqueta térmica</h2>
           </div>
-          <span id="previewMetaChip" class="meta-chip">50 × 20 mm · 203 dpi</span>
+          <span id="previewMetaChip" class="meta-chip">57 × 19 mm · 203 dpi</span>
         </div>
 
         <div class="preview-subbar">
-          <p class="preview-tap-hint">Toca el QR o cualquier línea para editar.</p>
+          <p class="preview-tap-hint">Toca cualquier texto para editarlo al instante.</p>
           <button id="btnOpenZoom" type="button" class="btn-zoom-trigger">
             <svg class="btn-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7"></circle>
@@ -105,270 +105,234 @@
         </div>
 
         <div class="thermal-stage">
-          <div id="thermalLabel" class="thermal-label" aria-label="Vista previa interactiva de la etiqueta térmica">
-            <div class="thermal-qr-col">
+          <div id="thermalLabel" class="thermal-label" aria-label="Vista previa de la etiqueta térmica de lote BIPA">
+            <div class="thermal-logo-col">
               <button
                 type="button"
-                id="previewTapQr"
-                class="thermal-tap-qr"
-                data-preview-action="qr"
-                aria-label="Editar contenido del código QR"
-                title="Tocar para editar el texto del QR"
-              >
-                <div id="qrCanvasWrap" class="thermal-qr-box"></div>
-              </button>
-            </div>
-
-            <div class="thermal-text-col">
-              <button
-                type="button"
-                id="previewBrandHeader"
-                class="thermal-line thermal-brand-header"
-                data-preview-action="slogan"
-                aria-label="Mostrar u ocultar logo y eslogan BIPA"
-                title="Tocar para activar o desactivar el encabezado de marca"
+                id="previewLogoBtn"
+                class="thermal-logo-btn"
+                title="Elegir otro producto del catálogo"
+                aria-label="Cambiar producto del catálogo"
               >
                 <img
                   src="./assets/logo-bipa.png"
-                  alt=""
-                  aria-hidden="true"
-                  class="thermal-brand-logo"
+                  alt="BIPA · Buenas ideas puestas en acción"
+                  class="thermal-logo-img"
                   width="1024"
                   height="635"
                 >
-                <span id="previewSloganText" class="thermal-slogan-text">BIPA · Buenas ideas puestas en acción</span>
               </button>
+            </div>
+
+            <div class="thermal-divider" aria-hidden="true"></div>
+
+            <div class="thermal-lot-col">
               <button
                 type="button"
-                id="previewLine1"
-                class="thermal-line thermal-line-1"
-                data-preview-action="line1"
-                aria-label="Editar prefijo y correlativo"
-                title="Tocar para editar correlativo"
-              >PAR-0000009</button>
+                id="previewTitle"
+                class="thermal-lot-title"
+                title="Tocar para editar el título de la etiqueta"
+              >Mahogany Teak Wood &amp; Coconut</button>
+
               <button
                 type="button"
-                id="previewLine2"
-                class="thermal-line thermal-line-2"
-                data-preview-action="line2"
-                aria-label="Editar código y lote"
-                title="Tocar para editar código y lote"
-              >EX116 · L 2609200449</button>
-              <button
-                type="button"
-                id="previewLine3"
-                class="thermal-line thermal-line-3"
-                data-preview-action="line3"
-                aria-label="Editar peso y vencimiento"
-                title="Tocar para editar peso y vencimiento"
-              >25,00 kg · vence 09/2027</button>
+                id="previewSubtitle"
+                class="thermal-lot-subtitle"
+                title="Tocar para editar los aromas del pack"
+                hidden
+              ></button>
+
+              <div class="thermal-lot-grid">
+                <button type="button" id="previewRowNet" class="thermal-lot-row" title="Tocar para editar Cont. Neto">
+                  <span class="thermal-field-key">Cont. Neto:</span>
+                  <span id="previewNetContent" class="thermal-field-val">190 g / 6.70 oz</span>
+                </button>
+                <button type="button" id="previewRowLot" class="thermal-lot-row" title="Tocar para editar Lote">
+                  <span class="thermal-field-key">Lote:</span>
+                  <span id="previewLot" class="thermal-field-val">02062658001L7</span>
+                </button>
+                <button type="button" id="previewRowElab" class="thermal-lot-row" title="Tocar para editar Elaboración">
+                  <span class="thermal-field-key">Elaboración:</span>
+                  <span id="previewElaboration" class="thermal-field-val">15/10/2026</span>
+                </button>
+                <button type="button" id="previewRowExp" class="thermal-lot-row" title="Tocar para editar Vencimiento">
+                  <span class="thermal-field-key">Vencimiento:</span>
+                  <span id="previewExpiry" class="thermal-field-val">15/10/2028</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-
-        <!-- Recuadro compacto y legible con el texto exacto del QR en tiempo real -->
-        <div class="qr-live-box" aria-live="polite">
-          <div class="qr-live-header">
-            <div class="qr-live-title-group">
-              <span class="qr-live-label">Texto exacto del QR</span>
-              <span id="previewQrModeBadge" class="qr-mode-badge">Solo correlativo</span>
-            </div>
-            <div class="qr-live-right">
-              <span id="previewQrChars" class="qr-chars-pill font-mono">11 car.</span>
-              <button type="button" id="btnQuickEditQr" class="qr-edit-pill">Editar</button>
-            </div>
-          </div>
-          <code id="previewQrPayload" class="qr-live-value font-mono">PAR-0000009</code>
-        </div>
-
-        <div id="previewBatchWrap" class="preview-batch-wrap" hidden>
-          <div id="previewBatchBadge" class="batch-badge"></div>
         </div>
       </section>
 
-      <!-- 3. Bloque dedicado: Contenido del código QR (3 modos) -->
-      <section id="qrEditorSection" class="card qr-editor-section" aria-labelledby="qrEditorHeading">
+      <!-- 3. Selector / Buscador con 3 pestañas claras: Aromas, Intenciones y Pack x2 -->
+      <section id="catalogSection" class="card catalog-section" aria-labelledby="catalogHeading">
         <div class="section-header">
           <div>
-            <span class="section-eyebrow">CÓDIGO QR</span>
-            <h2 id="qrEditorHeading" class="section-title">Contenido del código QR</h2>
+            <span class="section-eyebrow">CATÁLOGO DE CONTROL</span>
+            <h2 id="catalogHeading" class="section-title">Elige etiqueta BIPA</h2>
           </div>
+          <span id="catalogCount" class="meta-chip">12 de 12</span>
         </div>
 
-        <div class="segmented segmented-three" role="tablist" aria-label="Modo de contenido del código QR">
+        <div id="catalogTabs" class="segmented segmented-three" role="tablist" aria-label="Categorías de etiquetas BIPA">
           <button
             type="button"
-            id="qrModeSerial"
             class="segmented-btn is-active"
             role="tab"
             aria-selected="true"
-            data-qr-mode="serial"
+            data-category="aromas"
           >
-            <span class="segmented-title">Solo correlativo</span>
-            <span class="segmented-sub">PAR-0000009</span>
+            <span class="segmented-title">Aromas</span>
+            <span class="segmented-sub">12 fragancias</span>
           </button>
-
           <button
             type="button"
-            id="qrModeAll"
             class="segmented-btn"
             role="tab"
             aria-selected="false"
-            data-qr-mode="all"
+            data-category="intenciones"
           >
-            <span class="segmented-title">Todos los datos</span>
-            <span class="segmented-sub">Auto con |</span>
+            <span class="segmented-title">Intenciones</span>
+            <span class="segmented-sub">4 velas</span>
           </button>
-
           <button
             type="button"
-            id="qrModeCustom"
             class="segmented-btn"
             role="tab"
             aria-selected="false"
-            data-qr-mode="custom"
+            data-category="packx2"
           >
-            <span class="segmented-title">Personalizado</span>
-            <span class="segmented-sub">Texto o enlace</span>
+            <span class="segmented-title">Pack x2</span>
+            <span class="segmented-sub">15 combos</span>
           </button>
         </div>
 
-        <!-- Información para modos automáticos -->
-        <div id="qrAutoInfoBox" class="qr-auto-info">
-          <p id="qrAutoInfoText" class="qr-auto-text">
-            El QR codifica automáticamente el correlativo actual del formulario.
-          </p>
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            id="inputProductSearch"
+            type="search"
+            class="search-input"
+            placeholder="Filtrar dentro de la pestaña..."
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Filtrar producto dentro de la categoría"
+          >
+          <button id="btnClearSearch" type="button" class="search-clear" aria-label="Limpiar búsqueda" hidden>×</button>
         </div>
 
-        <!-- Panel del modo Personalizado -->
-        <div id="qrCustomPanel" class="qr-custom-panel" hidden>
-          <div class="field">
-            <label for="inputCustomQr" class="field-label">Texto, código o enlace del QR</label>
-            <textarea
-              id="inputCustomQr"
-              class="field-textarea font-mono"
-              rows="3"
-              maxlength="280"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="Escribe o pega aquí un código, lote personalizado o enlace (ej. https://www.productosbipa.com)"
-            ></textarea>
-          </div>
-
-          <div class="qr-custom-actions">
-            <button id="btnPasteQr" type="button" class="btn btn-soft btn-compact">
-              <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              <span>Pegar</span>
-            </button>
-
-            <button id="btnClearQr" type="button" class="btn btn-outline btn-compact">
-              <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-              <span>Limpiar</span>
-            </button>
-          </div>
-
-          <div class="qr-counter-bar">
-            <span id="customQrCharCount" class="qr-counter-count font-mono">0 caracteres</span>
-            <span id="customQrLengthHint" class="qr-length-hint is-ok">Tamaño ideal para etiqueta 50 × 20 mm</span>
-          </div>
-        </div>
+        <div id="productList" class="product-list" role="listbox" aria-label="Listado de productos de la categoría"></div>
+        <div id="catalogCrossHint" class="cross-hint" hidden></div>
       </section>
 
-      <!-- 4. Formulario de datos -->
+      <!-- 4. Formulario dinámico según categoría seleccionada -->
       <section class="card form-section" aria-labelledby="formHeading">
         <div class="section-header">
           <div>
-            <span class="section-eyebrow">DATOS DE LA ETIQUETA</span>
-            <h2 id="formHeading" class="section-title">Textos y cantidad</h2>
+            <span class="section-eyebrow">DATOS DEL LOTE</span>
+            <h2 id="formHeading" class="section-title">Ajustar campos y cantidad</h2>
+          </div>
+          <div class="form-header-right">
+            <span id="activeTemplateBadge" class="template-badge">Plantilla: Aromas</span>
+            <button id="btnResetLotDefaults" type="button" class="link-action">
+              Lote base
+            </button>
           </div>
         </div>
 
         <form id="labelForm" class="label-form" novalidate>
-          <!-- Prefijo y correlativo -->
-          <div class="field-grid field-grid-correlativo">
-            <div class="field">
-              <label for="inputPrefix" class="field-label">Prefijo</label>
-              <input
-                id="inputPrefix"
-                name="prefix"
-                type="text"
-                class="field-input font-mono"
-                value="PAR-"
-                maxlength="16"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                placeholder="PAR-"
-              >
-            </div>
+          <!-- Modo AROMAS -->
+          <div id="groupAromaField" class="field">
+            <label for="inputLabelTitle" class="field-label">Aroma en la etiqueta</label>
+            <input
+              id="inputLabelTitle"
+              name="labelTitle"
+              type="text"
+              class="field-input"
+              maxlength="48"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Mahogany Teak Wood & Coconut"
+            >
+          </div>
 
-            <div class="field">
-              <label for="inputSerial" class="field-label">Número correlativo</label>
+          <!-- Modo INTENCIONES -->
+          <div id="groupIntentionField" class="field" hidden>
+            <label for="inputIntentionName" class="field-label">Intención (prefijo fijo: Vela Aromática)</label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix-tag" aria-hidden="true">Vela Aromática</span>
               <input
-                id="inputSerial"
-                name="serial"
+                id="inputIntentionName"
+                name="intentionName"
                 type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                class="field-input font-mono"
-                value="0000009"
-                maxlength="14"
+                class="field-input field-input-prefixed"
+                maxlength="32"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="0000009"
+                placeholder="Nuevos Comienzos"
               >
             </div>
           </div>
 
-          <!-- Switch autoincremento -->
-          <div class="toggle-card">
-            <div class="toggle-copy">
-              <label for="toggleAutoincrement" class="toggle-title">Autoincrementar correlativo</label>
-              <p id="autoincrementHint" class="toggle-hint">
-                Avanza el número automáticamente al imprimir.
-              </p>
-            </div>
-            <label class="switch" aria-label="Autoincrementar correlativo">
-              <input id="toggleAutoincrement" type="checkbox" checked>
-              <span class="switch-slider"></span>
-            </label>
-          </div>
-
-          <!-- Switch Encabezado de marca (Logo + Eslogan BIPA) -->
-          <div id="sloganToggleCard" class="toggle-card">
-            <div class="toggle-copy">
-              <label for="toggleSlogan" class="toggle-title">Encabezado de marca BIPA</label>
-              <p class="toggle-hint">
-                Incluye el logo monocromático y «BIPA · Buenas ideas puestas en acción».
-              </p>
-            </div>
-            <label class="switch" aria-label="Mostrar logo y eslogan BIPA en la etiqueta">
-              <input id="toggleSlogan" type="checkbox" checked>
-              <span class="switch-slider"></span>
-            </label>
-          </div>
-
-          <!-- Código y Lote -->
-          <div class="field-grid field-grid-two">
+          <!-- Modo PACK X2 -->
+          <div id="groupPackFields" class="pack-fields" hidden>
             <div class="field">
-              <label for="inputCode" class="field-label">Código / Referencia</label>
+              <label for="inputPackTitle" class="field-label">Encabezado del Pack</label>
               <input
-                id="inputCode"
-                name="code"
+                id="inputPackTitle"
+                name="packTitle"
                 type="text"
                 class="field-input"
-                value="EX116"
-                maxlength="24"
+                maxlength="40"
                 autocomplete="off"
-                autocapitalize="characters"
                 spellcheck="false"
-                placeholder="EX116"
+                placeholder="Velas aromáticas Pack X2"
+              >
+            </div>
+
+            <div class="field-grid field-grid-two">
+              <div class="field">
+                <label for="selectPackAroma1" class="field-label">Aroma 1 (130 g)</label>
+                <select id="selectPackAroma1" class="field-select"></select>
+              </div>
+              <div class="field">
+                <label for="selectPackAroma2" class="field-label">Aroma 2 (130 g)</label>
+                <select id="selectPackAroma2" class="field-select"></select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="inputSubtitle" class="field-label">Línea de aromas en la etiqueta</label>
+              <input
+                id="inputSubtitle"
+                name="subtitle"
+                type="text"
+                class="field-input"
+                maxlength="64"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Cata 11:11 y Blueberry Glacé"
+              >
+            </div>
+          </div>
+
+          <!-- Campos comunes de lote -->
+          <div class="field-grid field-grid-two">
+            <div class="field">
+              <label for="inputNetContent" class="field-label">Cont. Neto</label>
+              <input
+                id="inputNetContent"
+                name="netContent"
+                type="text"
+                class="field-input"
+                maxlength="34"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="190 g / 6.70 oz"
               >
             </div>
 
@@ -379,29 +343,27 @@
                 name="lot"
                 type="text"
                 class="field-input font-mono"
-                value="2609200449"
-                maxlength="24"
+                maxlength="28"
                 autocomplete="off"
+                autocapitalize="characters"
                 spellcheck="false"
-                placeholder="2609200449"
+                placeholder="02062658001L7"
               >
             </div>
           </div>
 
-          <!-- Peso y Vencimiento -->
           <div class="field-grid field-grid-two">
             <div class="field">
-              <label for="inputWeight" class="field-label">Peso</label>
+              <label for="inputElaboration" class="field-label">Elaboración</label>
               <input
-                id="inputWeight"
-                name="weight"
+                id="inputElaboration"
+                name="elaboration"
                 type="text"
-                class="field-input"
-                value="25,00 kg"
-                maxlength="20"
+                class="field-input font-mono"
+                maxlength="16"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="25,00 kg"
+                placeholder="15/10/2026"
               >
             </div>
 
@@ -412,16 +374,14 @@
                 name="expiry"
                 type="text"
                 class="field-input font-mono"
-                value="09/2027"
                 maxlength="16"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="09/2027"
+                placeholder="15/10/2028"
               >
             </div>
           </div>
 
-          <!-- Cantidad de etiquetas -->
           <div class="field">
             <label for="inputQuantity" class="field-label">Cantidad de etiquetas</label>
             <div class="stepper">
@@ -434,7 +394,7 @@
                 class="stepper-input font-mono"
                 value="1"
                 min="1"
-                max="500"
+                max="999"
                 step="1"
               >
               <button id="btnQtyPlus" type="button" class="stepper-btn" aria-label="Aumentar cantidad">+</button>
@@ -504,11 +464,11 @@
           <div class="field-grid field-grid-two">
             <div class="field">
               <label for="inputWidthMm" class="field-label">Ancho (mm)</label>
-              <input id="inputWidthMm" type="number" inputmode="decimal" class="field-input font-mono" value="50" min="25" max="120" step="1">
+              <input id="inputWidthMm" type="number" inputmode="decimal" class="field-input font-mono" value="57" min="30" max="120" step="1">
             </div>
             <div class="field">
               <label for="inputHeightMm" class="field-label">Alto (mm)</label>
-              <input id="inputHeightMm" type="number" inputmode="decimal" class="field-input font-mono" value="20" min="12" max="100" step="1">
+              <input id="inputHeightMm" type="number" inputmode="decimal" class="field-input font-mono" value="19" min="12" max="100" step="1">
             </div>
           </div>
 
@@ -533,20 +493,23 @@
             </div>
           </div>
 
-          <!-- Factor de tamaño QR (^BQN) -->
-          <div class="field">
-            <div class="label-with-value">
-              <label for="inputQrMag" class="field-label">Factor tamaño QR (<code class="inline-code">^BQN</code>)</label>
-              <span id="qrMagValue" class="value-badge font-mono">4</span>
+          <!-- Oscuridad (~SD) y Velocidad (^PR) -->
+          <div class="field-grid field-grid-two">
+            <div class="field">
+              <div class="label-with-value">
+                <label for="inputDarkness" class="field-label">Oscuridad (<code class="inline-code">~SD</code>)</label>
+                <span id="darknessValue" class="value-badge font-mono">25</span>
+              </div>
+              <input id="inputDarkness" type="range" class="bipa-range" min="5" max="30" step="1" value="25">
             </div>
-            <div class="range-row">
-              <span class="range-bound font-mono">1</span>
-              <input id="inputQrMag" type="range" class="bipa-range" min="1" max="10" step="1" value="4">
-              <span class="range-bound font-mono">10</span>
+
+            <div class="field">
+              <div class="label-with-value">
+                <label for="inputSpeed" class="field-label">Velocidad (<code class="inline-code">^PR</code>)</label>
+                <span id="speedValue" class="value-badge font-mono">3</span>
+              </div>
+              <input id="inputSpeed" type="range" class="bipa-range" min="2" max="6" step="1" value="3">
             </div>
-            <p class="field-helper">
-              Recomendado: <strong class="font-mono">4</strong> para 203 dpi o <strong class="font-mono">6</strong> para 300 dpi en etiquetas de 50 × 20 mm.
-            </p>
           </div>
 
           <!-- Acciones ZPL y Restablecer -->
@@ -568,7 +531,7 @@
 
           <div class="calibration-footer">
             <button id="btnResetCalibration" type="button" class="link-action link-danger">
-              Restablecer calibración predeterminada
+              Restablecer calibración (57 × 19 mm · 203 dpi)
             </button>
           </div>
         </div>
@@ -586,7 +549,7 @@
     <div class="zoom-modal-topbar">
       <div class="zoom-title-group">
         <span class="zoom-eyebrow">VISTA AMPLIADA</span>
-        <h2 id="zoomModalTitle" class="zoom-title">50 × 20 mm · 203 dpi</h2>
+        <h2 id="zoomModalTitle" class="zoom-title">57 × 19 mm · 203 dpi</h2>
       </div>
       <div class="zoom-controls">
         <button id="btnToggleRotate" type="button" class="zoom-btn" aria-pressed="false" title="Rotar etiqueta 90 grados">
@@ -605,33 +568,43 @@
     <div id="zoomStage" class="zoom-stage">
       <div id="zoomLabelFrame" class="zoom-label-frame">
         <div id="zoomThermalLabel" class="thermal-label thermal-label-zoomed" aria-label="Etiqueta térmica ampliada">
-          <div class="thermal-qr-col">
-            <div id="zoomQrCanvasWrap" class="thermal-qr-box"></div>
-          </div>
-          <div class="thermal-text-col">
-            <div id="zoomBrandHeader" class="thermal-line thermal-brand-header is-static">
+          <div class="thermal-logo-col">
+            <div class="thermal-logo-btn is-static">
               <img
                 src="./assets/logo-bipa.png"
-                alt=""
-                aria-hidden="true"
-                class="thermal-brand-logo"
+                alt="BIPA · Buenas ideas puestas en acción"
+                class="thermal-logo-img"
                 width="1024"
                 height="635"
               >
-              <span id="zoomSloganText" class="thermal-slogan-text">BIPA · Buenas ideas puestas en acción</span>
             </div>
-            <div id="zoomLine1" class="thermal-line thermal-line-1 is-static">PAR-0000009</div>
-            <div id="zoomLine2" class="thermal-line thermal-line-2 is-static">EX116 · L 2609200449</div>
-            <div id="zoomLine3" class="thermal-line thermal-line-3 is-static">25,00 kg · vence 09/2027</div>
+          </div>
+
+          <div class="thermal-divider" aria-hidden="true"></div>
+
+          <div class="thermal-lot-col">
+            <div id="zoomTitle" class="thermal-lot-title is-static">Mahogany Teak Wood &amp; Coconut</div>
+            <div id="zoomSubtitle" class="thermal-lot-subtitle is-static" hidden></div>
+            <div class="thermal-lot-grid">
+              <div class="thermal-lot-row is-static">
+                <span class="thermal-field-key">Cont. Neto:</span>
+                <span id="zoomNetContent" class="thermal-field-val">190 g / 6.70 oz</span>
+              </div>
+              <div class="thermal-lot-row is-static">
+                <span class="thermal-field-key">Lote:</span>
+                <span id="zoomLot" class="thermal-field-val">02062658001L7</span>
+              </div>
+              <div class="thermal-lot-row is-static">
+                <span class="thermal-field-key">Elaboración:</span>
+                <span id="zoomElaboration" class="thermal-field-val">15/10/2026</span>
+              </div>
+              <div class="thermal-lot-row is-static">
+                <span class="thermal-field-key">Vencimiento:</span>
+                <span id="zoomExpiry" class="thermal-field-val">15/10/2028</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="zoom-modal-footer">
-      <div class="zoom-qr-summary">
-        <span class="zoom-qr-tag">QR:</span>
-        <code id="zoomQrPayload" class="zoom-qr-code font-mono">PAR-0000009</code>
       </div>
     </div>
   </div>
@@ -639,7 +612,7 @@
   <!-- Toast flotante -->
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="./js/qrcode.js"></script>
+  <script src="./js/catalog.js"></script>
   <script src="./js/storage.js"></script>
   <script src="./js/zpl.js"></script>
   <script src="./js/zebra-usb.js"></script>

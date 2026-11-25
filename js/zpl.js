@@ -1,17 +1,15 @@
 /**
- * BIPA Etiquetas QR · Motor ZPL II nativo para Zebra ZD410
- * - Convierte ./assets/logo-bipa.png en tiempo real mediante un <canvas> oculto
- *   a mapa de bits monocromático de 1 bit (^GFA) escalado según 203 dpi o 300 dpi.
- * - Incluye encabezado de marca (logo + "BIPA · Buenas ideas puestas en acción") con ^CI28 (UTF-8).
- * - Soporta modo QR personalizado, offsets X/Y en dots y correlativos con ceros a la izquierda.
+ * BIPA Etiquetas de Lote · Motor ZPL II nativo para Zebra ZD410
+ * Plantillas fieles a las 3 categorías de sistema/imprimir.ps1 (57 x 19 mm):
+ * - Aromas (5 filas): logo ancho (172/456), divisoria x=178, título + Cont. Neto, Lote, Elaboración, Vencimiento
+ * - Intenciones (5 filas): logo compacto (138/456), divisoria x=144, título "Vela Aromática ...", estilo uniforme
+ * - Pack x2 (6 filas): logo compacto (138/456), divisoria x=144, título + subtítulo de aromas + 4 filas uniformes
  */
 (function (global) {
   'use strict';
 
-  const BIPA_SLOGAN = 'BIPA · Buenas ideas puestas en acción';
   const DEFAULT_LOGO_SRC = './assets/logo-bipa.png';
 
-  // Caché en memoria del logo cargado y sus mapas de bits ^GFA por resolución (WxH)
   let logoImage = null;
   let logoCropBounds = null;
   let logoLoadPromise = null;
@@ -21,11 +19,11 @@
    * Detecta el rectángulo útil (sin bordes transparentes) del logo cargado.
    */
   function computeImageBounds(img) {
-    if (typeof document === 'undefined') {
-      return { x: 0, y: 0, w: img.naturalWidth || img.width, h: img.naturalHeight || img.height };
-    }
     const w = img.naturalWidth || img.width;
     const h = img.naturalHeight || img.height;
+    if (typeof document === 'undefined') {
+      return { x: 0, y: 0, w: w, h: h };
+    }
     try {
       const canvas = document.createElement('canvas');
       canvas.width = w;
@@ -60,7 +58,7 @@
         return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
       }
     } catch (_err) {
-      // Fallback si el navegador restringe getImageData (ej. file://)
+      // Fallback si el entorno restringe getImageData
     }
     return { x: 0, y: 0, w: w, h: h };
   }
@@ -98,7 +96,7 @@
   }
 
   /**
-   * Permite inyectar una fuente rasterizada (p. ej. pruebas en Node o canvas externo).
+   * Permite inyectar una fuente de imagen para pruebas automatizadas.
    */
   function setLogoSource(img, bounds) {
     logoImage = img || null;
@@ -107,14 +105,14 @@
   }
 
   /**
-   * Convierte el logo de BIPA a un mapa de bits monocromático de 1 bit (negro puro sobre blanco)
-   * usando un <canvas> oculto y devuelve el comando ZPL ^GFA listo para insertar.
+   * Convierte ./assets/logo-bipa.png a un mapa de bits de 1 bit (negro puro sobre blanco)
+   * usando un <canvas> oculto y devuelve el comando ZPL ^GFA correspondiente.
    */
   function buildLogoGfa(targetWidthDots, targetHeightDots) {
     if (!logoImage || typeof document === 'undefined') return null;
 
-    const w = Math.max(8, Math.round(targetWidthDots));
-    const h = Math.max(8, Math.round(targetHeightDots));
+    const w = Math.max(16, Math.round(targetWidthDots));
+    const h = Math.max(12, Math.round(targetHeightDots));
     const cacheKey = w + 'x' + h;
     if (gfaCache[cacheKey]) return gfaCache[cacheKey];
 
@@ -126,7 +124,6 @@
         h: logoImage.naturalHeight || logoImage.height
       };
 
-      // Renderizamos en un canvas oculto con fondo blanco limpio para conservar nitidez
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
@@ -135,7 +132,6 @@
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Ajustar manteniendo proporción exacta del logo sin deformar
       const scale = Math.min(w / bounds.w, h / bounds.h);
       const drawW = Math.max(1, Math.round(bounds.w * scale));
       const drawH = Math.max(1, Math.round(bounds.h * scale));
@@ -172,14 +168,11 @@
               const b = pixels[p + 2];
               const a = pixels[p + 3];
 
-              // Convertir con alto contraste: los trazos del logo (verde hoja/marrón/gris)
-              // sobre fondo transparente pasan a negro puro (1), el fondo a blanco (0).
               let isDark = false;
-              if (a >= 72) {
+              if (a >= 68) {
                 const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                // Compensar antialiasing sobre blanco para conservar trazos finos de la hoja y letras
                 const blendedLum = (lum * (a / 255)) + 255 * (1 - a / 255);
-                isDark = blendedLum < 218;
+                isDark = blendedLum < 215;
               }
               if (isDark) {
                 byteVal |= (0x80 >> bit);
@@ -206,22 +199,6 @@
   }
 
   /**
-   * Suma un desplazamiento entero a un correlativo numérico conservando
-   * los ceros a la izquierda (ej. "0000009" + 5 => "0000014").
-   */
-  function stepSerial(serialStr, delta) {
-    const raw = String(serialStr || '').trim();
-    const digitsOnly = raw.replace(/\D/g, '');
-    if (!digitsOnly) {
-      return String(Math.max(0, delta));
-    }
-    const width = digitsOnly.length;
-    const baseNum = parseInt(digitsOnly, 10);
-    const nextNum = Math.max(0, (Number.isFinite(baseNum) ? baseNum : 0) + delta);
-    return String(nextNum).padStart(width, '0');
-  }
-
-  /**
    * Sanitiza texto para campos ^FD de ZPL II evitando comandos accidentales (^ o ~).
    */
   function sanitizeZplField(text) {
@@ -232,310 +209,222 @@
   }
 
   /**
-   * Construye el encabezado de marca opcional, las 3 líneas de texto y el contenido del QR.
-   */
-  function buildLabelLines(data, serialOverride) {
-    const prefix = String(data.prefix || '');
-    const serial = serialOverride !== undefined ? String(serialOverride) : String(data.serial || '');
-    const code = String(data.code || '').trim();
-    const lot = String(data.lot || '').trim();
-    const weight = String(data.weight || '').trim();
-    const expiry = String(data.expiry || '').trim();
-    const showSlogan = data.showSlogan !== false;
-
-    const correlative = prefix + serial;
-
-    let line2 = '';
-    if (code && lot) {
-      line2 = code + ' · L ' + lot;
-    } else if (code) {
-      line2 = code;
-    } else if (lot) {
-      line2 = 'L ' + lot;
-    }
-
-    let line3 = '';
-    if (weight && expiry) {
-      line3 = weight + ' · vence ' + expiry;
-    } else if (weight) {
-      line3 = weight;
-    } else if (expiry) {
-      line3 = 'vence ' + expiry;
-    }
-
-    let qrPayload = correlative;
-    let isCustomEmpty = false;
-
-    if (data.qrMode === 'all') {
-      qrPayload = [correlative, code, lot, weight, expiry].join('|');
-    } else if (data.qrMode === 'custom') {
-      const customRaw = String(data.customQrText || '').trim();
-      if (customRaw.length > 0) {
-        qrPayload = customRaw;
-      } else {
-        qrPayload = correlative || BIPA_SLOGAN;
-        isCustomEmpty = true;
-      }
-    }
-
-    return {
-      correlative: correlative,
-      slogan: showSlogan ? BIPA_SLOGAN : '',
-      showSlogan: showSlogan,
-      line1: correlative,
-      line2: line2,
-      line3: line3,
-      qrPayload: qrPayload || ' ',
-      isCustomEmpty: isCustomEmpty
-    };
-  }
-
-  /**
-   * Estima la cantidad de módulos por lado del QR (EC Level M) para calcular
-   * la proporción real en la vista previa y el espacio horizontal en ZPL.
-   */
-  function estimateQrModules(payload) {
-    const len = typeof TextEncoder !== 'undefined'
-      ? new TextEncoder().encode(String(payload || '')).length
-      : String(payload || '').length;
-    if (len <= 14) return 21;  // v1
-    if (len <= 26) return 25;  // v2
-    if (len <= 42) return 29;  // v3
-    if (len <= 62) return 33;  // v4
-    if (len <= 84) return 37;  // v5
-    if (len <= 106) return 41; // v6
-    if (len <= 122) return 45; // v7
-    return 49;                 // v8+
-  }
-
-  /**
-   * Calcula un ancho de carácter seguro en ^A0 para que la línea no se corte
-   * en el borde derecho de la etiqueta física.
+   * Ajusta el ancho de carácter en ^A0N para que el texto nunca se corte por el borde derecho.
    */
   function fitFontWidth(text, targetWidthDots, maxAvailableDots, minWidthDots) {
     const chars = Math.max(1, String(text || '').length);
-    const estimatedTotal = chars * targetWidthDots * 0.60;
+    const estimatedTotal = chars * targetWidthDots * 0.56;
     if (estimatedTotal <= maxAvailableDots) {
       return Math.round(targetWidthDots);
     }
-    const fitted = Math.floor(maxAvailableDots / (chars * 0.60));
+    const fitted = Math.floor(maxAvailableDots / (chars * 0.56));
     return Math.max(minWidthDots, fitted);
   }
 
   /**
-   * Calcula métricas de layout compartidas (dots y porcentajes) para mantener coherencia
-   * entre la vista previa en pantalla y la salida ZPL II física.
+   * Calcula métricas fieles a imprimir.ps1 en 57 x 19 mm (456 x 152 dots a 203 dpi)
+   * diferenciando Aromas (logo 172/456) de Intenciones y Pack x2 (logo 138/456).
    */
-  function computeLayoutMetrics(lines, cal) {
+  function computeLayoutMetrics(data, cal) {
     const dpi = Number(cal.dpi) === 300 ? 300 : 203;
     const dotsPerMm = dpi / 25.4;
     const scale = dpi / 203;
-    const pw = Math.max(160, Math.round(cal.widthMm * dotsPerMm));
-    const ll = Math.max(80, Math.round(cal.heightMm * dotsPerMm));
-    const qrMag = Math.max(1, Math.min(10, Math.round(Number(cal.qrMag) || 4)));
-    const qrModules = estimateQrModules(lines.qrPayload);
-    const qrSizeDots = qrModules * qrMag;
+    const widthMm = Number(cal.widthMm) || 57;
+    const heightMm = Number(cal.heightMm) || 19;
 
-    // Porcentaje visual del QR en la columna izquierda (32%–38% en calibración estándar),
-    // reflejando cambios del factor ^BQN en vivo sin desbordar el alto ni empujar el texto.
-    const maxQrByHeightPct = ((ll * 0.92) / pw) * 100;
-    const defaultMag = 4 * scale;
-    const magRatio = qrMag / defaultMag;
-    const moduleBoost = qrModules > 25 ? 1.04 : 1.0;
-    const scaledPct = 34 * (0.45 + 0.55 * magRatio) * moduleBoost;
-    const clampedPct = Math.max(18, Math.min(38, maxQrByHeightPct, scaledPct));
+    const pw = Math.max(200, Math.round(widthMm * dotsPerMm));
+    const ll = Math.max(80, Math.round(heightMm * dotsPerMm));
+
+    const category = data.category === 'intenciones' || data.category === 'packx2' ? data.category : 'aromas';
+    const hasSubtitle = category === 'packx2' || Boolean(String(data.subtitle || '').trim());
+    const compactLogo = category !== 'aromas' || Boolean(data.compactLogo || hasSubtitle);
+    const uniformBold = category !== 'aromas' || Boolean(data.uniformBold);
+
+    // Proporciones exactas de imprimir.ps1: 172/456 (Aromas) vs 138/456 (Intenciones y Pack x2)
+    const logoWidthRatio = compactLogo ? (138 / 456) : (172 / 456);
+    const logoMaxH = Math.round(ll * 0.84);
+    const logoAspect = logoCropBounds && logoCropBounds.h > 0
+      ? (logoCropBounds.w / logoCropBounds.h)
+      : 1.648;
+
+    let logoW = Math.round(pw * logoWidthRatio);
+    let logoH = Math.round(logoW / logoAspect);
+    if (logoH > logoMaxH) {
+      logoH = logoMaxH;
+      logoW = Math.round(logoH * logoAspect);
+    }
+
+    const previewLogoColPct = Number(((logoW / pw) * 100).toFixed(2));
 
     return {
       dpi: dpi,
       dotsPerMm: dotsPerMm,
       scale: scale,
+      widthMm: widthMm,
+      heightMm: heightMm,
       pw: pw,
       ll: ll,
-      qrMag: qrMag,
-      qrModules: qrModules,
-      qrSizeDots: qrSizeDots,
-      previewQrWidthPercent: Number(clampedPct.toFixed(2))
+      category: category,
+      hasSubtitle: hasSubtitle,
+      compactLogo: compactLogo,
+      uniformBold: uniformBold,
+      logoW: logoW,
+      logoH: logoH,
+      previewLogoColPct: Math.max(24, Math.min(39, previewLogoColPct))
     };
   }
 
   /**
-   * Genera un bloque ZPL II (^XA ... ^XZ) para una etiqueta individual.
+   * Genera el código ZPL II completo adaptado a la plantilla de la categoría activa.
    */
-  function buildSingleLabelZpl(lines, cal, copies) {
-    const m = computeLayoutMetrics(lines, cal);
+  function generateLotZpl(data, cal) {
+    const m = computeLayoutMetrics(data, cal);
     const scale = m.scale;
     const pw = m.pw;
     const ll = m.ll;
     const offX = Math.round(Number(cal.offsetX) || 0);
     const offY = Math.round(Number(cal.offsetY) || 0);
+    const darkness = Math.max(5, Math.min(30, Math.round(Number(cal.darkness) || 25)));
+    const speed = Math.max(2, Math.min(6, Math.round(Number(cal.speed) || 3)));
+    const copies = Math.max(1, Math.min(999, Math.round(Number(data.quantity) || 1)));
 
-    // Margen izquierdo y centrado vertical del bloque QR
-    const marginLeft = Math.round(12 * scale);
-    const marginRight = Math.round(10 * scale);
-    const qrCenterY = Math.round((ll - m.qrSizeDots) / 2) - Math.round(4 * scale);
+    // 1. Logo monocromático BIPA a la izquierda (^GFA) en posición fiel (x=2, divisoria x=178 o x=144)
+    const marginLeft = Math.round(2 * scale);
+    const logoX = Math.max(0, marginLeft + offX);
+    const logoY = Math.max(0, Math.round((ll - m.logoH) / 2) + offY);
+    const logoGfa = buildLogoGfa(m.logoW, m.logoH);
 
-    const qrX = Math.max(0, marginLeft + offX);
-    const qrY = Math.max(0, Math.max(Math.round(4 * scale), qrCenterY) + offY);
+    // 2. Línea divisoria vertical (^GB)
+    const dividerGap = Math.round(4 * scale);
+    const dividerThick = Math.max(2, Math.round(2 * scale));
+    const dividerPadY = Math.round(6 * scale);
+    const dividerX = Math.max(0, marginLeft + m.logoW + dividerGap + offX);
+    const dividerY = Math.max(0, dividerPadY + offY);
+    const dividerH = Math.max(20, ll - dividerPadY * 2);
 
-    // Inicio horizontal del bloque derecho a la derecha del QR
-    const qrGap = Math.round(14 * scale);
-    const minTextX = Math.round(134 * scale);
-    const maxTextX = Math.round(pw * 0.46);
-    const computedTextX = Math.min(maxTextX, Math.max(minTextX, marginLeft + m.qrSizeDots + qrGap));
-    const textX = Math.max(0, computedTextX + offX);
-    const availableTextWidth = Math.max(Math.round(80 * scale), pw - computedTextX - marginRight);
-
-    // Escalado por DPI y alto de etiqueta
-    const heightRatio = Math.max(0.8, Math.min(1.6, cal.heightMm / 20));
-    const hasBrandHeader = Boolean(lines.showSlogan && lines.slogan);
-
-    // Dimensiones del logo BIPA monocromático (^GFA) junto al lema
-    const logoAspect = logoCropBounds && logoCropBounds.h > 0
-      ? (logoCropBounds.w / logoCropBounds.h)
-      : 1.61;
-    const logoH = Math.round(22 * scale * heightRatio);
-    const logoW = Math.round(logoH * logoAspect);
-    const logoGfa = hasBrandHeader ? buildLogoGfa(logoW, logoH) : null;
-    const logoGap = logoGfa ? Math.round(6 * scale) : 0;
-
-    const sloganX = textX + (logoGfa ? logoGfa.widthDots + logoGap : 0);
-    const availableSloganWidth = Math.max(
-      Math.round(60 * scale),
-      availableTextWidth - (logoGfa ? logoGfa.widthDots + logoGap : 0)
+    // 3. Bloque derecho de textos
+    const colT = Math.max(0, dividerX + dividerThick + Math.round(4 * scale));
+    const marginRight = Math.round(4 * scale);
+    const fullRightWidth = Math.max(
+      Math.round(100 * scale),
+      pw - (colT - offX) - marginRight
     );
 
-    const fSloganH = Math.round(14 * scale * heightRatio);
-    const fSloganW = fitFontWidth(lines.slogan, 11.5 * scale * heightRatio, availableSloganWidth, Math.round(7.5 * scale));
+    const safeTitle = sanitizeZplField(data.labelTitle || data.name || 'Producto BIPA');
+    const safeSubtitle = m.category === 'packx2' || data.subtitle
+      ? sanitizeZplField(data.subtitle || '')
+      : '';
+    const safeNet = sanitizeZplField(data.netContent || '');
+    const safeLot = sanitizeZplField(data.lot || '');
+    const safeElab = sanitizeZplField(data.elaboration || '');
+    const safeExp = sanitizeZplField(data.expiry || '');
 
-    const headerRowH = hasBrandHeader ? Math.max(fSloganH, logoGfa ? logoGfa.heightDots : fSloganH) : 0;
+    const rows = [
+      { kind: 'title', label: '', value: safeTitle }
+    ];
+    if (safeSubtitle) {
+      rows.push({ kind: 'subtitle', label: '', value: safeSubtitle });
+    }
+    rows.push(
+      { kind: 'field', label: 'Cont. Neto:', value: safeNet },
+      { kind: 'field', label: 'Lote:', value: safeLot },
+      { kind: 'field', label: 'Elaboración:', value: safeElab },
+      { kind: 'field', label: 'Vencimiento:', value: safeExp }
+    );
 
-    const f1H = Math.round((hasBrandHeader ? 30 : 32) * scale * heightRatio);
-    const f1W = fitFontWidth(lines.line1, (hasBrandHeader ? 24 : 25) * scale * heightRatio, availableTextWidth, Math.round(13 * scale));
+    const nRows = rows.length;
+    const heightRatio = Math.max(0.8, Math.min(1.8, m.heightMm / 19));
+    const isSixRows = nRows > 5;
+    const rowStep = Math.round((isSixRows ? 23.5 : 28) * scale * heightRatio);
+    const blockH = rowStep * nRows;
+    const baseY = Math.max(Math.round(4 * scale), Math.round((ll - blockH) / 2));
 
-    const f2H = Math.round((hasBrandHeader ? 19 : 20) * scale * heightRatio);
-    const f2W = fitFontWidth(lines.line2, (hasBrandHeader ? 16 : 17) * scale * heightRatio, availableTextWidth, Math.round(10 * scale));
+    // Tipografía diferenciada por plantilla (Aromas, Intenciones, Pack x2)
+    let titleTargetH = 24;
+    let titleTargetW = 18;
+    let fieldTargetH = 19.5;
+    let labelCharTargetW = 15;
 
-    const f3H = Math.round((hasBrandHeader ? 18 : 19) * scale * heightRatio);
-    const f3W = fitFontWidth(lines.line3, (hasBrandHeader ? 15 : 16) * scale * heightRatio, availableTextWidth, Math.round(10 * scale));
-
-    // Distribución vertical centrada y equilibrada
-    const gapHeader = hasBrandHeader ? Math.round(8 * scale * heightRatio) : 0;
-    const gap12 = Math.round((hasBrandHeader ? 10 : 14) * scale * heightRatio);
-    const gap23 = Math.round((hasBrandHeader ? 8 : 12) * scale * heightRatio);
-
-    const textBlockHeight =
-      (hasBrandHeader ? headerRowH + gapHeader : 0) +
-      f1H +
-      gap12 +
-      f2H +
-      gap23 +
-      f3H;
-
-    const baseTextY = Math.max(Math.round(6 * scale), Math.round((ll - textBlockHeight) / 2));
-
-    let cursorY = baseTextY;
-    const yLogo = Math.max(0, cursorY + offY);
-    const ySlogan = Math.max(0, cursorY + Math.round((headerRowH - fSloganH) / 2) + offY);
-    if (hasBrandHeader) {
-      cursorY += headerRowH + gapHeader;
+    if (m.category === 'intenciones') {
+      titleTargetH = 23;
+      titleTargetW = 17.5;
+      fieldTargetH = 19.5;
+      labelCharTargetW = 14.5;
+    } else if (m.category === 'packx2' || isSixRows) {
+      titleTargetH = 20;
+      titleTargetW = 16;
+      fieldTargetH = 17;
+      labelCharTargetW = 13;
     }
 
-    const y1 = Math.max(0, cursorY + offY);
-    cursorY += f1H + gap12;
-    const y2 = Math.max(0, cursorY + offY);
-    cursorY += f2H + gap23;
-    const y3 = Math.max(0, cursorY + offY);
+    const titleH = Math.round(titleTargetH * scale * heightRatio);
+    const titleW = fitFontWidth(safeTitle, titleTargetW * scale * heightRatio, fullRightWidth, Math.round(9 * scale));
 
-    const safeQr = sanitizeZplField(lines.qrPayload);
-    const safeSlogan = sanitizeZplField(lines.slogan);
-    const safeL1 = sanitizeZplField(lines.line1);
-    const safeL2 = sanitizeZplField(lines.line2);
-    const safeL3 = sanitizeZplField(lines.line3);
+    const subH = Math.round(17 * scale * heightRatio);
+    const subW = fitFontWidth(safeSubtitle, 14 * scale * heightRatio, fullRightWidth, Math.round(8 * scale));
+
+    const fieldH = Math.round(fieldTargetH * scale * heightRatio);
+    const labelCharW = Math.round(labelCharTargetW * scale * heightRatio);
+
+    // Columna de valores alineada tras "Vencimiento:"
+    const labelColW = Math.min(
+      Math.round(fullRightWidth * 0.43),
+      Math.round(12 * labelCharW * 0.56) + Math.round(6 * scale)
+    );
+    const colV = colT + labelColW;
+    const maxValWidth = Math.max(Math.round(60 * scale), fullRightWidth - labelColW);
 
     const zpl = [
+      '~SD' + darkness,
       '^XA',
       '^CI28',
       '^PW' + pw,
       '^LL' + ll,
-      '^LH0,0',
-      '^FO' + qrX + ',' + qrY + '^BQN,2,' + m.qrMag + '^FDMA,' + safeQr + '^FS'
+      '^MNY',
+      '^PR' + speed,
+      '^LH0,0'
     ];
 
-    if (hasBrandHeader) {
-      if (logoGfa) {
-        zpl.push('^FO' + textX + ',' + yLogo + logoGfa.command + '^FS');
+    if (logoGfa) {
+      zpl.push('^FO' + logoX + ',' + logoY + logoGfa.command + '^FS');
+    }
+
+    zpl.push('^FO' + dividerX + ',' + dividerY + '^GB' + dividerThick + ',' + dividerH + ',' + dividerThick + '^FS');
+
+    for (let i = 0; i < nRows; i++) {
+      const row = rows[i];
+      const y = Math.max(0, baseY + i * rowStep + offY);
+
+      if (row.kind === 'title') {
+        zpl.push('^FO' + colT + ',' + y + '^A0N,' + titleH + ',' + titleW + '^FD' + row.value + '^FS');
+      } else if (row.kind === 'subtitle') {
+        zpl.push('^FO' + colT + ',' + y + '^A0N,' + subH + ',' + subW + '^FD' + row.value + '^FS');
+      } else {
+        zpl.push('^FO' + colT + ',' + y + '^A0N,' + fieldH + ',' + labelCharW + '^FD' + row.label + '^FS');
+        if (row.value) {
+          const valBaseW = m.uniformBold ? labelCharW : Math.max(Math.round(8 * scale), labelCharW - Math.round(scale));
+          const valW = fitFontWidth(row.value, valBaseW, maxValWidth, Math.round(8 * scale));
+          zpl.push('^FO' + colV + ',' + y + '^A0N,' + fieldH + ',' + valW + '^FD' + row.value + '^FS');
+        }
       }
-      if (safeSlogan) {
-        zpl.push('^FO' + sloganX + ',' + ySlogan + '^A0N,' + fSloganH + ',' + fSloganW + '^FD' + safeSlogan + '^FS');
-      }
     }
 
-    zpl.push('^FO' + textX + ',' + y1 + '^A0N,' + f1H + ',' + f1W + '^FD' + safeL1 + '^FS');
-
-    if (safeL2) {
-      zpl.push('^FO' + textX + ',' + y2 + '^A0N,' + f2H + ',' + f2W + '^FD' + safeL2 + '^FS');
-    }
-    if (safeL3) {
-      zpl.push('^FO' + textX + ',' + y3 + '^A0N,' + f3H + ',' + f3W + '^FD' + safeL3 + '^FS');
-    }
-
-    const qty = Math.max(1, Math.round(Number(copies) || 1));
-    zpl.push('^PQ' + qty + ',0,1,Y');
+    zpl.push('^PQ' + copies + ',0,1,Y');
     zpl.push('^XZ');
 
-    return zpl.join('\n');
-  }
-
-  /**
-   * Genera el lote completo ZPL II según cantidad y switch de autoincremento.
-   */
-  function generateBatchZpl(formData, calibration) {
-    const quantity = Math.max(1, Math.min(500, Math.round(Number(formData.quantity) || 1)));
-    const auto = Boolean(formData.autoincrement);
-    const startSerial = String(formData.serial || '').trim();
-
-    if (!auto) {
-      const lines = buildLabelLines(formData, startSerial);
-      return {
-        zpl: buildSingleLabelZpl(lines, calibration, quantity) + '\n',
-        count: quantity,
-        firstCorrelative: lines.correlative,
-        lastCorrelative: lines.correlative,
-        nextSerial: startSerial
-      };
-    }
-
-    const blocks = [];
-    let firstCorrelative = '';
-    let lastCorrelative = '';
-
-    for (let i = 0; i < quantity; i++) {
-      const currentSerial = stepSerial(startSerial, i);
-      const lines = buildLabelLines(formData, currentSerial);
-      if (i === 0) firstCorrelative = lines.correlative;
-      lastCorrelative = lines.correlative;
-      blocks.push(buildSingleLabelZpl(lines, calibration, 1));
-    }
-
-    const nextSerial = stepSerial(startSerial, quantity);
-
     return {
-      zpl: blocks.join('\n') + '\n',
-      count: quantity,
-      firstCorrelative: firstCorrelative,
-      lastCorrelative: lastCorrelative,
-      nextSerial: nextSerial
+      zpl: zpl.join('\n') + '\n',
+      count: copies,
+      title: safeTitle,
+      metrics: m
     };
   }
 
   global.BipaZPL = {
-    BIPA_SLOGAN: BIPA_SLOGAN,
     loadLogo: loadLogo,
     setLogoSource: setLogoSource,
     buildLogoGfa: buildLogoGfa,
     computeLayoutMetrics: computeLayoutMetrics,
-    stepSerial: stepSerial,
-    buildLabelLines: buildLabelLines,
-    generateBatchZpl: generateBatchZpl
+    generateLotZpl: generateLotZpl
   };
 })(window);

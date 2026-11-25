@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BIPA · Etiquetas QR (Zebra ZD410)
+   BIPA · Etiquetas de Lote (Zebra ZD410)
    Paleta oficial según IDENTIDAD_BIPA.md (Línea clásica BIPA / Catálogo 2026)
    ========================================================================== */
 
@@ -385,8 +385,26 @@ body.modal-open {
   white-space: nowrap;
 }
 
+.form-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.template-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--bipa-marron);
+  background: rgba(126, 91, 85, 0.10);
+  border: 1px solid rgba(126, 91, 85, 0.22);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
-   2. Vista previa térmica (SIEMPRE blanco puro y tinta negra pura, sin desbordes)
+   2. Vista previa térmica de Lote (57 x 19 mm, blanco y negro puro, sin desborde)
    ========================================================================== */
 .preview-subbar {
   display: flex;
@@ -447,305 +465,199 @@ body.modal-open {
 
 .thermal-label {
   width: 100%;
-  max-width: 460px;
-  aspect-ratio: 50 / 20;
+  max-width: 470px;
+  aspect-ratio: 57 / 19;
   container-type: inline-size;
   background: #FFFFFF !important;
   color: #000000 !important;
   border: 1.5px solid #D5DBD0;
   border-radius: 10px;
   box-shadow: var(--shadow-label);
-  padding: 2.6cqw 3.4cqw;
+  padding: 1.3cqw 1.8cqw;
   display: flex;
   flex-direction: row;
-  align-items: center;
-  gap: 3.2cqw;
+  align-items: stretch;
+  gap: 1.4cqw;
   overflow: hidden;
   user-select: none;
-  position: relative;
 }
 
-.thermal-qr-col {
-  flex: 0 0 var(--qr-col-w, 34%);
-  width: var(--qr-col-w, 34%);
-  max-width: 38%;
-  height: 100%;
+.thermal-logo-col {
+  flex: 0 0 var(--logo-col-w, 37.7%);
+  width: var(--logo-col-w, 37.7%);
+  max-width: 39%;
   min-width: 0;
-  min-height: 0;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FFFFFF;
   overflow: hidden;
   transition: width 0.16s ease, flex-basis 0.16s ease;
 }
 
-.thermal-tap-qr {
+.thermal-logo-btn {
   appearance: none;
   border: none;
+  background: #FFFFFF;
   padding: 0;
   margin: 0;
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  background: #FFFFFF;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  transition: transform 0.12s ease, outline-color 0.15s ease;
-  outline: 2px solid transparent;
-  outline-offset: -1px;
-  touch-action: manipulation;
-}
-
-.thermal-tap-qr:hover,
-.thermal-tap-qr:focus-visible {
-  outline-color: rgba(40, 106, 77, 0.45);
-}
-
-.thermal-tap-qr:active {
-  transform: scale(0.96);
-}
-
-.thermal-qr-box {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #FFFFFF;
+  border-radius: 4px;
   overflow: hidden;
 }
 
-.thermal-qr-box svg {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+.thermal-logo-btn.is-static {
+  cursor: default;
+}
+
+.thermal-logo-img {
   display: block;
-  shape-rendering: crispEdges;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) contrast(1000%) brightness(0);
 }
 
-.thermal-text-col {
+.thermal-divider {
+  flex: 0 0 0.45cqw;
+  width: 0.45cqw;
+  min-width: 1.5px;
+  background: #000000;
+  margin: 0.5cqw 0;
+  border-radius: 1px;
+}
+
+.thermal-lot-col {
   flex: 1 1 0%;
   min-width: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  gap: 0.9cqw;
-  color: #000000;
+  align-items: stretch;
+  gap: 0.55cqw;
   overflow: hidden;
+  color: #000000;
 }
 
-.thermal-line {
+.thermal-lot-title,
+.thermal-lot-subtitle,
+.thermal-lot-row {
   appearance: none;
   border: none;
   background: transparent;
-  padding: 0.3cqw 0.5cqw;
-  margin: 0 -0.5cqw;
+  padding: 0.15cqw 0.4cqw;
+  margin: 0 -0.4cqw;
   border-radius: 3px;
   text-align: left;
-  width: calc(100% + 1cqw);
-  max-width: calc(100% + 1cqw);
   color: #000000 !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.12;
   cursor: pointer;
   touch-action: manipulation;
   transition: background-color 0.12s ease;
 }
 
-.thermal-line.is-static {
+.thermal-lot-title.is-static,
+.thermal-lot-subtitle.is-static,
+.thermal-lot-row.is-static {
   cursor: default;
 }
 
-.thermal-line:not(.is-static):hover,
-.thermal-line:not(.is-static):focus-visible {
+.thermal-lot-title:not(.is-static):hover,
+.thermal-lot-subtitle:not(.is-static):hover,
+.thermal-lot-row:not(.is-static):hover {
   background: rgba(0, 0, 0, 0.06);
-  outline: none;
 }
 
-.thermal-line:not(.is-static):active {
-  background: rgba(0, 0, 0, 0.12);
+.thermal-lot-title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 4.1cqw;
+  line-height: 1.12;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.015em;
 }
 
-.thermal-line[hidden] {
+.thermal-lot-subtitle {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 3.1cqw;
+  line-height: 1.12;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thermal-lot-subtitle[hidden] {
   display: none !important;
 }
 
-/* Encabezado de marca monocromático: Logo BIPA negro puro + Lema */
-.thermal-brand-header {
+.thermal-lot-grid {
   display: flex;
-  align-items: center;
-  gap: 1.4cqw;
-  margin-bottom: 0.4cqw;
+  flex-direction: column;
+  gap: 0.4cqw;
   min-width: 0;
 }
 
-.thermal-brand-logo {
-  display: block;
-  height: 4.8cqw;
-  width: auto;
-  max-width: 9cqw;
-  object-fit: contain;
-  flex-shrink: 0;
-  /* Convierte el PNG transparente oficial a monocromático negro puro (#000) sobre blanco */
-  filter: grayscale(1) contrast(1000%) brightness(0);
+.thermal-lot-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.1cqw;
+  width: calc(100% + 0.8cqw);
+  min-width: 0;
+  line-height: 1.12;
 }
 
-.thermal-slogan-text {
+.thermal-field-key {
+  flex: 0 0 18.6cqw;
   font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 2.28cqw;
-  letter-spacing: 0.005em;
+  font-weight: 800;
+  font-size: 3.3cqw;
+  color: #000000 !important;
+  white-space: nowrap;
+}
+
+.thermal-field-val {
+  flex: 1 1 0%;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 3.3cqw;
   color: #000000 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
-  line-height: 1.15;
 }
 
-.thermal-line-1 {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 6.2cqw;
-  letter-spacing: -0.02em;
-  line-height: 1.06;
-  margin-bottom: 0.25cqw;
-}
-
-.thermal-line-2 {
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 3.9cqw;
-  letter-spacing: -0.005em;
-}
-
-.thermal-line-3 {
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 3.65cqw;
-}
-
-/* Recuadro compacto y legible debajo de la vista previa con el texto exacto del QR */
-.qr-live-box {
-  margin-top: 12px;
-  padding: 10px 12px;
-  background: var(--bipa-crema-verdoso);
-  border: 1.5px solid rgba(40, 106, 77, 0.18);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.qr-live-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.qr-live-title-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.qr-live-label {
-  font-size: 0.74rem;
+/* Estilo uniforme negrita fiel a imprimir.ps1 para Intenciones y Pack x2 */
+.thermal-label.is-uniform-bold .thermal-field-val {
   font-weight: 800;
-  color: var(--bipa-verde-bosque);
-  letter-spacing: 0.01em;
 }
 
-.qr-mode-badge {
-  font-size: 0.69rem;
-  font-weight: 700;
-  color: var(--bipa-marron);
-  background: rgba(126, 91, 85, 0.10);
-  border: 1px solid rgba(126, 91, 85, 0.20);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
+/* Ajuste compacto cuando hay subtítulo (Pack x2) para que las 6 líneas respiren sin cortarse */
+.thermal-label.has-subtitle .thermal-lot-col {
+  gap: 0.32cqw;
 }
-
-.qr-live-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.thermal-label.has-subtitle .thermal-lot-title {
+  font-size: 3.7cqw;
 }
-
-.qr-chars-pill {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+.thermal-label.has-subtitle .thermal-lot-grid {
+  gap: 0.25cqw;
 }
-
-.qr-edit-pill {
-  appearance: none;
-  border: 1px solid rgba(40, 106, 77, 0.28);
-  background: var(--bipa-blanco);
-  color: var(--bipa-verde-bosque);
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
+.thermal-label.has-subtitle .thermal-field-key,
+.thermal-label.has-subtitle .thermal-field-val {
+  font-size: 2.95cqw;
 }
-
-.qr-edit-pill:active {
-  background: var(--surface-subtle);
-}
-
-.qr-live-value {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--bipa-verde-bosque-oscuro);
-  background: var(--bipa-blanco);
-  border: 1px solid rgba(40, 106, 77, 0.12);
-  border-radius: 9px;
-  padding: 8px 10px;
-  line-height: 1.38;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.preview-batch-wrap {
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.preview-batch-wrap[hidden] {
-  display: none;
-}
-
-.batch-badge {
-  font-family: var(--font-mono);
-  font-size: 0.73rem;
-  font-weight: 700;
-  color: var(--bipa-verde-bosque-oscuro);
-  background: rgba(149, 207, 95, 0.28);
-  border: 1px solid rgba(122, 154, 69, 0.45);
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
+.thermal-label.has-subtitle .thermal-field-key {
+  flex-basis: 17cqw;
 }
 
 /* ==========================================================================
@@ -843,7 +755,7 @@ body.modal-open {
 }
 
 .zoom-label-frame {
-  width: min(94vw, 860px);
+  width: min(94vw, 880px);
   max-height: 100%;
   display: flex;
   align-items: center;
@@ -852,7 +764,7 @@ body.modal-open {
 }
 
 .zoom-label-frame.is-rotated {
-  width: min(74dvh, 760px);
+  width: min(82dvh, 780px);
   transform: rotate(90deg);
 }
 
@@ -863,50 +775,16 @@ body.modal-open {
   border-color: #FFFFFF;
 }
 
-.zoom-modal-footer {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-}
-
-.zoom-qr-summary {
-  width: 100%;
-  max-width: 640px;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: var(--radius-md);
-  padding: 9px 12px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.zoom-qr-tag {
-  font-size: 0.76rem;
-  font-weight: 800;
-  color: var(--bipa-lima-claro);
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.zoom-qr-code {
-  font-size: 0.8rem;
-  color: var(--bipa-blanco);
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
 /* ==========================================================================
-   3. Bloque dedicado: Contenido del código QR (3 pestañas + Personalizado)
+   3. Selector / Buscador con 3 pestañas (Aromas, Intenciones, Pack x2)
    ========================================================================== */
-.qr-editor-section {
+.catalog-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 11px;
 }
 
-.qr-editor-section .section-header {
+.catalog-section .section-header {
   margin-bottom: 0;
 }
 
@@ -929,7 +807,7 @@ body.modal-open {
   border: 1.5px solid transparent;
   background: transparent;
   border-radius: 10px;
-  padding: 10px 6px;
+  padding: 9px 6px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -940,7 +818,7 @@ body.modal-open {
   color: var(--text-secondary);
   transition: all 0.16s ease;
   font-family: var(--font-sans);
-  min-height: 54px;
+  min-height: 52px;
   touch-action: manipulation;
 }
 
@@ -952,128 +830,211 @@ body.modal-open {
 }
 
 .segmented-title {
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   line-height: 1.18;
 }
 
 .segmented-sub {
-  font-size: 0.68rem;
+  font-size: 0.69rem;
   font-weight: 500;
   opacity: 0.82;
   line-height: 1.15;
 }
 
-.qr-auto-info {
-  padding: 10px 12px;
-  background: var(--surface-subtle);
-  border: 1px solid rgba(122, 154, 69, 0.22);
-  border-radius: var(--radius-md);
-}
-
-.qr-auto-info[hidden] {
-  display: none;
-}
-
-.qr-auto-text {
-  margin: 0;
-  font-size: 0.81rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.qr-custom-panel {
+.search-wrap {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
 }
 
-.qr-custom-panel[hidden] {
-  display: none;
+.search-icon {
+  position: absolute;
+  left: 13px;
+  width: 18px;
+  height: 18px;
+  color: var(--bipa-gris-calido);
+  pointer-events: none;
 }
 
-.field-textarea {
+.search-input {
   width: 100%;
-  min-height: 92px;
-  padding: 12px 13px;
-  font-family: var(--font-mono);
-  font-size: 0.94rem;
-  font-weight: 500;
-  line-height: 1.45;
+  min-height: 46px;
+  padding: 10px 40px 10px 38px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text-primary);
   background: var(--bipa-crema-verdoso);
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  resize: vertical;
   outline: none;
   transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.field-textarea:focus {
+.search-input:focus {
   background: var(--bipa-blanco);
   border-color: var(--bipa-verde-bosque);
   box-shadow: 0 0 0 3px rgba(149, 207, 95, 0.30);
 }
 
-.qr-custom-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.btn-compact {
-  min-height: 46px !important;
-  padding: 10px 14px !important;
-  font-size: 0.9rem !important;
-  justify-content: center !important;
-  gap: 8px !important;
-}
-
-.btn-icon-sm {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.qr-counter-bar {
+.search-clear {
+  position: absolute;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(126, 91, 85, 0.14);
+  color: var(--bipa-marron);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear[hidden] {
+  display: none;
+}
+
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 270px;
+  overflow-y: auto;
+  padding-right: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.product-item {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid var(--border-subtle);
+  background: var(--bipa-crema-verdoso);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px 10px;
-  padding: 8px 11px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-subtle);
-  border: 1px solid var(--border-subtle);
+  gap: 10px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
 }
 
-.qr-counter-count {
-  font-size: 0.78rem;
-  font-weight: 700;
+.product-item:active {
+  transform: scale(0.985);
+}
+
+.product-item.is-selected {
+  background: #EDF6E4;
+  border-color: var(--bipa-verde-hoja);
+  box-shadow: 0 3px 10px rgba(122, 154, 69, 0.16);
+}
+
+.product-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.product-item-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.product-item.is-selected .product-item-name {
   color: var(--bipa-verde-bosque-oscuro);
 }
 
-.qr-length-hint {
-  font-size: 0.76rem;
-  font-weight: 600;
-  line-height: 1.3;
+.product-item-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
-.qr-length-hint.is-ok {
-  color: var(--bipa-verde-bosque);
-}
-
-.qr-length-hint.is-medium {
-  color: var(--bipa-marron);
-}
-
-.qr-length-hint.is-warning {
-  color: #8A3324;
+.product-tag {
+  font-size: 0.69rem;
   font-weight: 700;
+  color: var(--bipa-marron);
+  background: rgba(126, 91, 85, 0.11);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+}
+
+.product-item-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(40, 106, 77, 0.25);
+  background: var(--bipa-blanco);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: transparent;
+  flex-shrink: 0;
+}
+
+.product-item.is-selected .product-item-check {
+  background: var(--bipa-verde-hoja);
+  border-color: var(--bipa-verde-hoja);
+  color: var(--bipa-blanco);
+}
+
+.product-empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  background: var(--bipa-crema-verdoso);
+  border-radius: var(--radius-md);
+}
+
+.cross-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  border: 1px solid rgba(122, 154, 69, 0.28);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.cross-hint[hidden] {
+  display: none;
+}
+
+.cross-hint-btn {
+  appearance: none;
+  border: 1px solid rgba(40, 106, 77, 0.30);
+  background: var(--bipa-blanco);
+  color: var(--bipa-verde-bosque-oscuro);
+  font-family: var(--font-sans);
+  font-size: 0.77rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
 }
 
 /* ==========================================================================
-   4. Formulario de datos (mobile-first, controles amplios)
+   4. Formulario dinámico de datos (mobile-first, controles amplios)
    ========================================================================== */
 .label-form {
   display: flex;
@@ -1081,13 +1042,19 @@ body.modal-open {
   gap: 14px;
 }
 
+.pack-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pack-fields[hidden] {
+  display: none;
+}
+
 .field-grid {
   display: grid;
   gap: 10px;
-}
-
-.field-grid-correlativo {
-  grid-template-columns: minmax(96px, 0.78fr) minmax(0, 1.45fr);
 }
 
 .field-grid-two {
@@ -1101,18 +1068,23 @@ body.modal-open {
   min-width: 0;
 }
 
+.field[hidden] {
+  display: none;
+}
+
 .field-label {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.field-input {
+.field-input,
+.field-select {
   width: 100%;
   min-height: 48px;
   padding: 11px 13px;
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 600;
   color: var(--text-primary);
   background: var(--bipa-crema-verdoso);
@@ -1126,16 +1098,48 @@ body.modal-open {
   font-family: var(--font-mono);
 }
 
-.field-input:focus {
+.field-input:focus,
+.field-select:focus {
   background: var(--bipa-blanco);
   border-color: var(--bipa-verde-bosque);
   box-shadow: 0 0 0 3px rgba(149, 207, 95, 0.30);
 }
 
-.field-helper {
-  margin: 2px 0 0;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
+/* Prefijo inline "Vela Aromática" para Intenciones */
+.input-prefix-wrap {
+  display: flex;
+  align-items: stretch;
+  background: var(--bipa-crema-verdoso);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.input-prefix-wrap:focus-within {
+  background: var(--bipa-blanco);
+  border-color: var(--bipa-verde-bosque);
+  box-shadow: 0 0 0 3px rgba(149, 207, 95, 0.30);
+}
+
+.input-prefix-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--surface-subtle);
+  border-right: 1px solid var(--border-subtle);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--bipa-verde-bosque-oscuro);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.field-input-prefixed {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 .inline-code {
@@ -1145,86 +1149,6 @@ body.modal-open {
   color: var(--bipa-verde-bosque);
   padding: 1px 5px;
   border-radius: 5px;
-}
-
-/* Switch Autoincremento y Encabezado de marca */
-.toggle-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 12px 14px;
-  background: var(--surface-subtle);
-  border: 1px solid rgba(122, 154, 69, 0.22);
-  border-radius: var(--radius-md);
-}
-
-.toggle-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.toggle-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--bipa-verde-bosque-oscuro);
-  cursor: pointer;
-}
-
-.toggle-hint {
-  margin: 0;
-  font-size: 0.77rem;
-  color: var(--text-secondary);
-  line-height: 1.35;
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 54px;
-  height: 32px;
-  flex-shrink: 0;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.switch-slider {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-  background-color: #C7CFC2;
-  border-radius: var(--radius-pill);
-  transition: background-color 0.2s ease;
-}
-
-.switch-slider::before {
-  content: '';
-  position: absolute;
-  height: 24px;
-  width: 24px;
-  left: 4px;
-  bottom: 4px;
-  background-color: var(--bipa-blanco);
-  border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.switch input:checked + .switch-slider {
-  background-color: var(--bipa-verde-hoja);
-}
-
-.switch input:checked + .switch-slider::before {
-  transform: translateX(22px);
-}
-
-.switch input:focus-visible + .switch-slider {
-  box-shadow: 0 0 0 3px rgba(149, 207, 95, 0.45);
 }
 
 /* Stepper de cantidad */
@@ -1282,7 +1206,7 @@ body.modal-open {
 }
 
 /* ==========================================================================
-   5. Botones principales y secundarios (referencia visual captura BIPA)
+   5. Botones principales y secundarios
    ========================================================================== */
 .print-actions {
   display: flex;
@@ -1339,7 +1263,7 @@ body.modal-open {
   box-shadow: none;
 }
 
-/* Botón Imprimir en Zebra (protagonista con degradado BIPA Productos) */
+/* Botón Imprimir en Zebra */
 .btn-print-primary {
   min-height: 66px;
   padding: 14px 20px;
@@ -1485,7 +1409,6 @@ body.modal-open {
   margin-top: 14px;
 }
 
-/* Mini stepper para offsets */
 .mini-stepper {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 42px;
@@ -1524,7 +1447,6 @@ body.modal-open {
   -webkit-appearance: none;
 }
 
-/* Rango factor QR */
 .label-with-value {
   display: flex;
   align-items: center;
@@ -1541,26 +1463,13 @@ body.modal-open {
   border-radius: var(--radius-pill);
 }
 
-.range-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.range-bound {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 .bipa-range {
-  flex: 1;
+  width: 100%;
   accent-color: var(--bipa-verde-hoja);
   height: 28px;
   cursor: pointer;
 }
 
-/* ZPL toolbar y salida */
 .zpl-toolbar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1666,7 +1575,7 @@ body.modal-open {
   }
 
   .segmented-title {
-    font-size: 0.76rem;
+    font-size: 0.78rem;
   }
 
   .segmented-sub {

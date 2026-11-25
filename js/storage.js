@@ -1,36 +1,31 @@
 /**
- * BIPA Etiquetas QR · Persistencia en localStorage
- * Guarda calibración (dpi, medidas, offsets, tamaño QR), eslogan, modo QR y último correlativo.
+ * BIPA Etiquetas de Lote · Persistencia en localStorage
+ * Guarda calibración de la Zebra ZD410 (57x19 mm, 203/300 dpi, offsets, oscuridad, velocidad)
+ * y los datos activos de lote (producto seleccionado, lote, elaboración y vencimiento).
  */
 (function (global) {
   'use strict';
 
   const KEYS = {
-    calibration: 'bipa_qr_calibration_v1',
-    correlative: 'bipa_qr_correlative_v1'
+    calibration: 'bipa_lotes_calibration_v1',
+    lotState: 'bipa_lotes_state_v1'
   };
 
   const DEFAULT_CALIBRATION = Object.freeze({
     dpi: 203,
-    widthMm: 50,
-    heightMm: 20,
+    widthMm: 57,
+    heightMm: 19,
     offsetX: 0,
     offsetY: 0,
-    qrMag: 4
+    darkness: 25,
+    speed: 3
   });
 
-  const DEFAULT_FORM = Object.freeze({
-    prefix: 'PAR-',
-    serial: '0000009',
-    autoincrement: true,
-    showSlogan: true,
-    code: 'EX116',
-    lot: '2609200449',
-    weight: '25,00 kg',
-    expiry: '09/2027',
-    qrMode: 'serial',
-    customQrText: '',
-    quantity: 1
+  const DEFAULT_LOT_STATE = Object.freeze({
+    productId: 'aroma-1',
+    lot: '02062658001L7',
+    elaboration: '15/10/2026',
+    expiry: '15/10/2028'
   });
 
   function safeRead(key) {
@@ -58,11 +53,6 @@
     return Math.min(max, Math.max(min, n));
   }
 
-  function normalizeQrMode(mode) {
-    if (mode === 'all' || mode === 'custom') return mode;
-    return 'serial';
-  }
-
   function loadCalibration() {
     const saved = safeRead(KEYS.calibration);
     if (!saved || typeof saved !== 'object') {
@@ -72,22 +62,24 @@
     const dpi = Number(saved.dpi) === 300 ? 300 : 203;
     return {
       dpi: dpi,
-      widthMm: clampNum(saved.widthMm, 25, 120, DEFAULT_CALIBRATION.widthMm),
+      widthMm: clampNum(saved.widthMm, 30, 120, DEFAULT_CALIBRATION.widthMm),
       heightMm: clampNum(saved.heightMm, 12, 100, DEFAULT_CALIBRATION.heightMm),
-      offsetX: Math.round(clampNum(saved.offsetX, -120, 120, DEFAULT_CALIBRATION.offsetX)),
-      offsetY: Math.round(clampNum(saved.offsetY, -120, 120, DEFAULT_CALIBRATION.offsetY)),
-      qrMag: Math.round(clampNum(saved.qrMag, 1, 10, DEFAULT_CALIBRATION.qrMag))
+      offsetX: Math.round(clampNum(saved.offsetX, -120, 120, 0)),
+      offsetY: Math.round(clampNum(saved.offsetY, -120, 120, 0)),
+      darkness: Math.round(clampNum(saved.darkness, 5, 30, DEFAULT_CALIBRATION.darkness)),
+      speed: Math.round(clampNum(saved.speed, 2, 6, DEFAULT_CALIBRATION.speed))
     };
   }
 
   function saveCalibration(cal) {
     const sanitized = {
       dpi: Number(cal.dpi) === 300 ? 300 : 203,
-      widthMm: clampNum(cal.widthMm, 25, 120, DEFAULT_CALIBRATION.widthMm),
+      widthMm: clampNum(cal.widthMm, 30, 120, DEFAULT_CALIBRATION.widthMm),
       heightMm: clampNum(cal.heightMm, 12, 100, DEFAULT_CALIBRATION.heightMm),
       offsetX: Math.round(clampNum(cal.offsetX, -120, 120, 0)),
       offsetY: Math.round(clampNum(cal.offsetY, -120, 120, 0)),
-      qrMag: Math.round(clampNum(cal.qrMag, 1, 10, 4))
+      darkness: Math.round(clampNum(cal.darkness, 5, 30, DEFAULT_CALIBRATION.darkness)),
+      speed: Math.round(clampNum(cal.speed, 2, 6, DEFAULT_CALIBRATION.speed))
     };
     safeWrite(KEYS.calibration, sanitized);
     return sanitized;
@@ -99,47 +91,36 @@
     return fresh;
   }
 
-  function loadCorrelativeState() {
-    const saved = safeRead(KEYS.correlative);
+  function loadLotState() {
+    const saved = safeRead(KEYS.lotState);
     if (!saved || typeof saved !== 'object') {
-      return {
-        prefix: DEFAULT_FORM.prefix,
-        serial: DEFAULT_FORM.serial,
-        autoincrement: DEFAULT_FORM.autoincrement,
-        showSlogan: DEFAULT_FORM.showSlogan,
-        qrMode: DEFAULT_FORM.qrMode,
-        customQrText: DEFAULT_FORM.customQrText
-      };
+      return Object.assign({}, DEFAULT_LOT_STATE);
     }
 
     return {
-      prefix: typeof saved.prefix === 'string' ? saved.prefix : DEFAULT_FORM.prefix,
-      serial: typeof saved.serial === 'string' && saved.serial.length > 0 ? saved.serial : DEFAULT_FORM.serial,
-      autoincrement: typeof saved.autoincrement === 'boolean' ? saved.autoincrement : DEFAULT_FORM.autoincrement,
-      showSlogan: typeof saved.showSlogan === 'boolean' ? saved.showSlogan : DEFAULT_FORM.showSlogan,
-      qrMode: normalizeQrMode(saved.qrMode),
-      customQrText: typeof saved.customQrText === 'string' ? saved.customQrText : DEFAULT_FORM.customQrText
+      productId: typeof saved.productId === 'string' && saved.productId ? saved.productId : DEFAULT_LOT_STATE.productId,
+      lot: typeof saved.lot === 'string' && saved.lot.trim() ? saved.lot : DEFAULT_LOT_STATE.lot,
+      elaboration: typeof saved.elaboration === 'string' && saved.elaboration.trim() ? saved.elaboration : DEFAULT_LOT_STATE.elaboration,
+      expiry: typeof saved.expiry === 'string' && saved.expiry.trim() ? saved.expiry : DEFAULT_LOT_STATE.expiry
     };
   }
 
-  function saveCorrelativeState(state) {
-    safeWrite(KEYS.correlative, {
-      prefix: String(state.prefix || ''),
-      serial: String(state.serial || ''),
-      autoincrement: Boolean(state.autoincrement),
-      showSlogan: typeof state.showSlogan === 'boolean' ? state.showSlogan : true,
-      qrMode: normalizeQrMode(state.qrMode),
-      customQrText: String(state.customQrText || '')
+  function saveLotState(state) {
+    safeWrite(KEYS.lotState, {
+      productId: String(state.productId || DEFAULT_LOT_STATE.productId),
+      lot: String(state.lot || ''),
+      elaboration: String(state.elaboration || ''),
+      expiry: String(state.expiry || '')
     });
   }
 
   global.BipaStorage = {
     DEFAULT_CALIBRATION: DEFAULT_CALIBRATION,
-    DEFAULT_FORM: DEFAULT_FORM,
+    DEFAULT_LOT_STATE: DEFAULT_LOT_STATE,
     loadCalibration: loadCalibration,
     saveCalibration: saveCalibration,
     resetCalibration: resetCalibration,
-    loadCorrelativeState: loadCorrelativeState,
-    saveCorrelativeState: saveCorrelativeState
+    loadLotState: loadLotState,
+    saveLotState: saveLotState
   };
 })(window);

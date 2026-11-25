@@ -1,12 +1,12 @@
-/* Service Worker · BIPA Etiquetas QR (rutas 100% relativas para GitHub Pages) */
-const CACHE_NAME = 'bipa-qr-v3';
+/* Service Worker · BIPA Etiquetas de Lote (rutas 100% relativas para GitHub Pages) */
+const CACHE_NAME = 'bipa-lotes-v5';
 
 const APP_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './css/styles.css',
-  './js/qrcode.js',
+  './js/catalog.js',
   './js/storage.js',
   './js/zpl.js',
   './js/zebra-usb.js',
