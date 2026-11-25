@@ -81,7 +81,7 @@
     </div>
 
     <main class="main-content">
-      <!-- 2. Vista previa en vivo de la etiqueta (siempre fondo blanco y tinta negra) -->
+      <!-- 2. Vista previa en vivo de la etiqueta (siempre fondo blanco y tinta negra, interactiva al toque) -->
       <section class="card preview-section" aria-labelledby="previewHeading">
         <div class="section-header">
           <div>
@@ -91,34 +91,180 @@
           <span id="previewMetaChip" class="meta-chip">50 × 20 mm · 203 dpi</span>
         </div>
 
+        <p class="preview-tap-hint">Toca el QR o cualquier línea de la etiqueta para editar al instante.</p>
+
         <div class="thermal-stage">
-          <div id="thermalLabel" class="thermal-label" aria-label="Vista previa de la etiqueta térmica">
+          <div id="thermalLabel" class="thermal-label" aria-label="Vista previa interactiva de la etiqueta térmica">
             <div class="thermal-qr-col">
-              <div id="qrCanvasWrap" class="thermal-qr-box" aria-label="Código QR de la etiqueta"></div>
+              <button
+                type="button"
+                id="previewTapQr"
+                class="thermal-tap-qr"
+                data-preview-action="qr"
+                aria-label="Editar contenido del código QR"
+                title="Tocar para editar el texto del QR"
+              >
+                <div id="qrCanvasWrap" class="thermal-qr-box"></div>
+              </button>
             </div>
+
             <div class="thermal-text-col">
-              <div id="previewLine1" class="thermal-line thermal-line-1">PAR-0000009</div>
-              <div id="previewLine2" class="thermal-line thermal-line-2">EX116 · L 2609200449</div>
-              <div id="previewLine3" class="thermal-line thermal-line-3">25,00 kg · vence 09/2027</div>
+              <button
+                type="button"
+                id="previewSlogan"
+                class="thermal-line thermal-line-slogan"
+                data-preview-action="slogan"
+                aria-label="Mostrar u ocultar eslogan BIPA"
+                title="Tocar para ajustar el eslogan BIPA"
+              >BIPA · Buenas ideas puestas en acción</button>
+              <button
+                type="button"
+                id="previewLine1"
+                class="thermal-line thermal-line-1"
+                data-preview-action="line1"
+                aria-label="Editar prefijo y correlativo"
+                title="Tocar para editar correlativo"
+              >PAR-0000009</button>
+              <button
+                type="button"
+                id="previewLine2"
+                class="thermal-line thermal-line-2"
+                data-preview-action="line2"
+                aria-label="Editar código y lote"
+                title="Tocar para editar código y lote"
+              >EX116 · L 2609200449</button>
+              <button
+                type="button"
+                id="previewLine3"
+                class="thermal-line thermal-line-3"
+                data-preview-action="line3"
+                aria-label="Editar peso y vencimiento"
+                title="Tocar para editar peso y vencimiento"
+              >25,00 kg · vence 09/2027</button>
             </div>
           </div>
         </div>
 
-        <div class="preview-footer">
-          <div class="preview-qr-data">
-            <span class="preview-qr-label">QR:</span>
-            <code id="previewQrPayload" class="preview-qr-code">PAR-0000009</code>
+        <!-- Recuadro compacto y legible con el texto exacto del QR en tiempo real -->
+        <div class="qr-live-box" aria-live="polite">
+          <div class="qr-live-header">
+            <div class="qr-live-title-group">
+              <span class="qr-live-label">Texto exacto del QR</span>
+              <span id="previewQrModeBadge" class="qr-mode-badge">Solo correlativo</span>
+            </div>
+            <div class="qr-live-right">
+              <span id="previewQrChars" class="qr-chars-pill font-mono">11 car.</span>
+              <button type="button" id="btnQuickEditQr" class="qr-edit-pill">Editar</button>
+            </div>
           </div>
-          <div id="previewBatchBadge" class="batch-badge" hidden></div>
+          <code id="previewQrPayload" class="qr-live-value font-mono">PAR-0000009</code>
+        </div>
+
+        <div id="previewBatchWrap" class="preview-batch-wrap" hidden>
+          <div id="previewBatchBadge" class="batch-badge"></div>
         </div>
       </section>
 
-      <!-- 3. Formulario de datos -->
+      <!-- 3. Bloque dedicado: Contenido del código QR (3 modos) -->
+      <section id="qrEditorSection" class="card qr-editor-section" aria-labelledby="qrEditorHeading">
+        <div class="section-header">
+          <div>
+            <span class="section-eyebrow">CÓDIGO QR</span>
+            <h2 id="qrEditorHeading" class="section-title">Contenido del código QR</h2>
+          </div>
+        </div>
+
+        <div class="segmented segmented-three" role="tablist" aria-label="Modo de contenido del código QR">
+          <button
+            type="button"
+            id="qrModeSerial"
+            class="segmented-btn is-active"
+            role="tab"
+            aria-selected="true"
+            data-qr-mode="serial"
+          >
+            <span class="segmented-title">Solo correlativo</span>
+            <span class="segmented-sub">PAR-0000009</span>
+          </button>
+
+          <button
+            type="button"
+            id="qrModeAll"
+            class="segmented-btn"
+            role="tab"
+            aria-selected="false"
+            data-qr-mode="all"
+          >
+            <span class="segmented-title">Todos los datos</span>
+            <span class="segmented-sub">Auto con |</span>
+          </button>
+
+          <button
+            type="button"
+            id="qrModeCustom"
+            class="segmented-btn"
+            role="tab"
+            aria-selected="false"
+            data-qr-mode="custom"
+          >
+            <span class="segmented-title">Personalizado</span>
+            <span class="segmented-sub">Texto o enlace</span>
+          </button>
+        </div>
+
+        <!-- Información para modos automáticos -->
+        <div id="qrAutoInfoBox" class="qr-auto-info">
+          <p id="qrAutoInfoText" class="qr-auto-text">
+            El QR codifica automáticamente el correlativo actual del formulario.
+          </p>
+        </div>
+
+        <!-- Panel del modo Personalizado -->
+        <div id="qrCustomPanel" class="qr-custom-panel" hidden>
+          <div class="field">
+            <label for="inputCustomQr" class="field-label">Texto, código o enlace del QR</label>
+            <textarea
+              id="inputCustomQr"
+              class="field-textarea font-mono"
+              rows="3"
+              maxlength="280"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Escribe o pega aquí un código, lote personalizado o enlace (ej. https://www.productosbipa.com)"
+            ></textarea>
+          </div>
+
+          <div class="qr-custom-actions">
+            <button id="btnPasteQr" type="button" class="btn btn-soft btn-compact">
+              <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Pegar</span>
+            </button>
+
+            <button id="btnClearQr" type="button" class="btn btn-outline btn-compact">
+              <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              <span>Limpiar</span>
+            </button>
+          </div>
+
+          <div class="qr-counter-bar">
+            <span id="customQrCharCount" class="qr-counter-count font-mono">0 caracteres</span>
+            <span id="customQrLengthHint" class="qr-length-hint is-ok">Tamaño ideal para etiqueta 50 × 20 mm</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Formulario de datos -->
       <section class="card form-section" aria-labelledby="formHeading">
         <div class="section-header">
           <div>
             <span class="section-eyebrow">DATOS DE LA ETIQUETA</span>
-            <h2 id="formHeading" class="section-title">Contenido e impresión</h2>
+            <h2 id="formHeading" class="section-title">Textos y cantidad</h2>
           </div>
         </div>
 
@@ -169,6 +315,20 @@
             </div>
             <label class="switch" aria-label="Autoincrementar correlativo">
               <input id="toggleAutoincrement" type="checkbox" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <!-- Switch Eslogan BIPA -->
+          <div id="sloganToggleCard" class="toggle-card">
+            <div class="toggle-copy">
+              <label for="toggleSlogan" class="toggle-title">Mostrar eslogan BIPA</label>
+              <p class="toggle-hint">
+                Incluye «BIPA · Buenas ideas puestas en acción» en la etiqueta.
+              </p>
+            </div>
+            <label class="switch" aria-label="Mostrar eslogan BIPA en la etiqueta">
+              <input id="toggleSlogan" type="checkbox" checked>
               <span class="switch-slider"></span>
             </label>
           </div>
@@ -240,35 +400,6 @@
             </div>
           </div>
 
-          <!-- Selector rápido contenido del QR -->
-          <div class="field">
-            <span class="field-label" id="qrModeLabel">Contenido codificado en el QR</span>
-            <div class="segmented" role="radiogroup" aria-labelledby="qrModeLabel">
-              <button
-                type="button"
-                id="qrModeSerial"
-                class="segmented-btn is-active"
-                role="radio"
-                aria-checked="true"
-                data-qr-mode="serial"
-              >
-                <span class="segmented-title">Solo correlativo</span>
-                <span class="segmented-sub">PAR-0000009</span>
-              </button>
-              <button
-                type="button"
-                id="qrModeAll"
-                class="segmented-btn"
-                role="radio"
-                aria-checked="false"
-                data-qr-mode="all"
-              >
-                <span class="segmented-title">Todos los campos</span>
-                <span class="segmented-sub">Separados por |</span>
-              </button>
-            </div>
-          </div>
-
           <!-- Cantidad de etiquetas -->
           <div class="field">
             <label for="inputQuantity" class="field-label">Cantidad de etiquetas</label>
@@ -291,7 +422,7 @@
         </form>
       </section>
 
-      <!-- 4. Acciones de impresión -->
+      <!-- 5. Acciones de impresión -->
       <section class="print-actions" aria-label="Acciones de impresión">
         <button id="btnPrintUsb" type="button" class="btn btn-print-primary">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -318,7 +449,7 @@
         </button>
       </section>
 
-      <!-- 5. Panel plegable Calibración y ZPL (cerrado por defecto) -->
+      <!-- 6. Panel plegable Calibración y ZPL (cerrado por defecto) -->
       <details id="calibrationPanel" class="card calibration-panel">
         <summary class="calibration-summary">
           <div class="calibration-summary-left">

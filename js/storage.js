@@ -1,6 +1,6 @@
 /**
  * BIPA Etiquetas QR · Persistencia en localStorage
- * Guarda calibración (dpi, medidas, offsets, tamaño QR) y último correlativo.
+ * Guarda calibración (dpi, medidas, offsets, tamaño QR), eslogan, modo QR y último correlativo.
  */
 (function (global) {
   'use strict';
@@ -23,11 +23,13 @@
     prefix: 'PAR-',
     serial: '0000009',
     autoincrement: true,
+    showSlogan: true,
     code: 'EX116',
     lot: '2609200449',
     weight: '25,00 kg',
     expiry: '09/2027',
     qrMode: 'serial',
+    customQrText: '',
     quantity: 1
   });
 
@@ -54,6 +56,11 @@
     const n = Number(value);
     if (!Number.isFinite(n)) return fallback;
     return Math.min(max, Math.max(min, n));
+  }
+
+  function normalizeQrMode(mode) {
+    if (mode === 'all' || mode === 'custom') return mode;
+    return 'serial';
   }
 
   function loadCalibration() {
@@ -99,7 +106,9 @@
         prefix: DEFAULT_FORM.prefix,
         serial: DEFAULT_FORM.serial,
         autoincrement: DEFAULT_FORM.autoincrement,
-        qrMode: DEFAULT_FORM.qrMode
+        showSlogan: DEFAULT_FORM.showSlogan,
+        qrMode: DEFAULT_FORM.qrMode,
+        customQrText: DEFAULT_FORM.customQrText
       };
     }
 
@@ -107,7 +116,9 @@
       prefix: typeof saved.prefix === 'string' ? saved.prefix : DEFAULT_FORM.prefix,
       serial: typeof saved.serial === 'string' && saved.serial.length > 0 ? saved.serial : DEFAULT_FORM.serial,
       autoincrement: typeof saved.autoincrement === 'boolean' ? saved.autoincrement : DEFAULT_FORM.autoincrement,
-      qrMode: saved.qrMode === 'all' ? 'all' : 'serial'
+      showSlogan: typeof saved.showSlogan === 'boolean' ? saved.showSlogan : DEFAULT_FORM.showSlogan,
+      qrMode: normalizeQrMode(saved.qrMode),
+      customQrText: typeof saved.customQrText === 'string' ? saved.customQrText : DEFAULT_FORM.customQrText
     };
   }
 
@@ -116,7 +127,9 @@
       prefix: String(state.prefix || ''),
       serial: String(state.serial || ''),
       autoincrement: Boolean(state.autoincrement),
-      qrMode: state.qrMode === 'all' ? 'all' : 'serial'
+      showSlogan: typeof state.showSlogan === 'boolean' ? state.showSlogan : true,
+      qrMode: normalizeQrMode(state.qrMode),
+      customQrText: String(state.customQrText || '')
     });
   }
 

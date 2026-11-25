@@ -4,6 +4,12 @@
 (function () {
   'use strict';
 
+  const QR_MODE_LABELS = {
+    serial: 'Solo correlativo',
+    all: 'Todos los datos',
+    custom: 'Personalizado'
+  };
+
   const els = {
     printerStatusBadge: document.getElementById('printerStatusBadge'),
     printerStatusText: document.getElementById('printerStatusText'),
@@ -19,23 +25,42 @@
 
     previewMetaChip: document.getElementById('previewMetaChip'),
     thermalLabel: document.getElementById('thermalLabel'),
+    previewTapQr: document.getElementById('previewTapQr'),
     qrCanvasWrap: document.getElementById('qrCanvasWrap'),
+    previewSlogan: document.getElementById('previewSlogan'),
     previewLine1: document.getElementById('previewLine1'),
     previewLine2: document.getElementById('previewLine2'),
     previewLine3: document.getElementById('previewLine3'),
+    previewQrModeBadge: document.getElementById('previewQrModeBadge'),
+    previewQrChars: document.getElementById('previewQrChars'),
+    btnQuickEditQr: document.getElementById('btnQuickEditQr'),
     previewQrPayload: document.getElementById('previewQrPayload'),
+    previewBatchWrap: document.getElementById('previewBatchWrap'),
     previewBatchBadge: document.getElementById('previewBatchBadge'),
+
+    qrEditorSection: document.getElementById('qrEditorSection'),
+    qrModeSerial: document.getElementById('qrModeSerial'),
+    qrModeAll: document.getElementById('qrModeAll'),
+    qrModeCustom: document.getElementById('qrModeCustom'),
+    qrAutoInfoBox: document.getElementById('qrAutoInfoBox'),
+    qrAutoInfoText: document.getElementById('qrAutoInfoText'),
+    qrCustomPanel: document.getElementById('qrCustomPanel'),
+    inputCustomQr: document.getElementById('inputCustomQr'),
+    btnPasteQr: document.getElementById('btnPasteQr'),
+    btnClearQr: document.getElementById('btnClearQr'),
+    customQrCharCount: document.getElementById('customQrCharCount'),
+    customQrLengthHint: document.getElementById('customQrLengthHint'),
 
     inputPrefix: document.getElementById('inputPrefix'),
     inputSerial: document.getElementById('inputSerial'),
     toggleAutoincrement: document.getElementById('toggleAutoincrement'),
     autoincrementHint: document.getElementById('autoincrementHint'),
+    sloganToggleCard: document.getElementById('sloganToggleCard'),
+    toggleSlogan: document.getElementById('toggleSlogan'),
     inputCode: document.getElementById('inputCode'),
     inputLot: document.getElementById('inputLot'),
     inputWeight: document.getElementById('inputWeight'),
     inputExpiry: document.getElementById('inputExpiry'),
-    qrModeSerial: document.getElementById('qrModeSerial'),
-    qrModeAll: document.getElementById('qrModeAll'),
     inputQuantity: document.getElementById('inputQuantity'),
     btnQtyMinus: document.getElementById('btnQtyMinus'),
     btnQtyPlus: document.getElementById('btnQtyPlus'),
@@ -70,7 +95,7 @@
   let isPrinting = false;
 
   /* ------------------------------------------------------------------------
-     Avisos y Toast
+     Avisos, Toast y enfoque interactivo
      ------------------------------------------------------------------------ */
   function showAlert(message, type) {
     const kind = type || 'error';
@@ -91,6 +116,29 @@
     toastTimer = setTimeout(function () {
       els.toast.hidden = true;
     }, 2800);
+  }
+
+  function pulseElement(el) {
+    if (!el) return;
+    el.classList.remove('is-highlighted');
+    void el.offsetWidth;
+    el.classList.add('is-highlighted');
+  }
+
+  function focusAndScrollTo(inputEl, containerEl, selectAll) {
+    const scrollTarget = containerEl || inputEl;
+    if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+      scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    pulseElement(containerEl || inputEl);
+    if (inputEl && typeof inputEl.focus === 'function') {
+      setTimeout(function () {
+        inputEl.focus({ preventScroll: true });
+        if (selectAll && typeof inputEl.select === 'function') {
+          inputEl.select();
+        }
+      }, 220);
+    }
   }
 
   /* ------------------------------------------------------------------------
@@ -130,10 +178,12 @@
     els.inputPrefix.value = formState.prefix;
     els.inputSerial.value = formState.serial;
     els.toggleAutoincrement.checked = formState.autoincrement;
+    els.toggleSlogan.checked = formState.showSlogan;
     els.inputCode.value = formState.code;
     els.inputLot.value = formState.lot;
     els.inputWeight.value = formState.weight;
     els.inputExpiry.value = formState.expiry;
+    els.inputCustomQr.value = formState.customQrText;
     els.inputQuantity.value = String(formState.quantity);
 
     setQrModeButtons(formState.qrMode);
@@ -149,11 +199,28 @@
   }
 
   function setQrModeButtons(mode) {
-    const isSerial = mode !== 'all';
-    els.qrModeSerial.classList.toggle('is-active', isSerial);
-    els.qrModeSerial.setAttribute('aria-checked', String(isSerial));
-    els.qrModeAll.classList.toggle('is-active', !isSerial);
-    els.qrModeAll.setAttribute('aria-checked', String(!isSerial));
+    const normalized = mode === 'all' || mode === 'custom' ? mode : 'serial';
+    const buttons = [
+      { el: els.qrModeSerial, key: 'serial' },
+      { el: els.qrModeAll, key: 'all' },
+      { el: els.qrModeCustom, key: 'custom' }
+    ];
+
+    buttons.forEach(function (item) {
+      const active = item.key === normalized;
+      item.el.classList.toggle('is-active', active);
+      item.el.setAttribute('aria-selected', String(active));
+    });
+
+    const isCustom = normalized === 'custom';
+    els.qrCustomPanel.hidden = !isCustom;
+    els.qrAutoInfoBox.hidden = isCustom;
+
+    if (normalized === 'serial') {
+      els.qrAutoInfoText.textContent = 'Codifica únicamente el correlativo actual (ej. PAR-0000009). Máxima rapidez de lectura.';
+    } else if (normalized === 'all') {
+      els.qrAutoInfoText.textContent = 'Concatena automáticamente correlativo, código, lote, peso y vencimiento separados por «|».';
+    }
   }
 
   function setDpiButtons(dpi) {
@@ -169,10 +236,12 @@
     formState.prefix = els.inputPrefix.value;
     formState.serial = els.inputSerial.value;
     formState.autoincrement = els.toggleAutoincrement.checked;
+    formState.showSlogan = els.toggleSlogan.checked;
     formState.code = els.inputCode.value;
     formState.lot = els.inputLot.value;
     formState.weight = els.inputWeight.value;
     formState.expiry = els.inputExpiry.value;
+    formState.customQrText = els.inputCustomQr.value;
     formState.quantity = Number.isFinite(qtyRaw) ? Math.max(1, Math.min(500, qtyRaw)) : 1;
   }
 
@@ -189,6 +258,31 @@
   }
 
   /* ------------------------------------------------------------------------
+     Contador y aviso de longitud para el QR personalizado
+     ------------------------------------------------------------------------ */
+  function renderCustomQrMetrics() {
+    const len = formState.customQrText.trim().length;
+    const labelSizeText = calibration.widthMm + ' × ' + calibration.heightMm + ' mm';
+    els.customQrCharCount.textContent = len === 1 ? '1 carácter' : len + ' caracteres';
+
+    els.customQrLengthHint.classList.remove('is-ok', 'is-medium', 'is-warning');
+
+    if (len === 0) {
+      els.customQrLengthHint.classList.add('is-medium');
+      els.customQrLengthHint.textContent = 'Vacío: mientras escribes se usará el correlativo.';
+    } else if (len <= 45) {
+      els.customQrLengthHint.classList.add('is-ok');
+      els.customQrLengthHint.textContent = 'Tamaño ideal para QR en ' + labelSizeText + '.';
+    } else if (len <= 85) {
+      els.customQrLengthHint.classList.add('is-medium');
+      els.customQrLengthHint.textContent = 'Texto mediano: prueba el escaneo en ' + labelSizeText + '.';
+    } else {
+      els.customQrLengthHint.classList.add('is-warning');
+      els.customQrLengthHint.textContent = 'Muy largo para ' + labelSizeText + ': el QR saldrá denso y puede costar leerlo.';
+    }
+  }
+
+  /* ------------------------------------------------------------------------
      Render en vivo: Vista previa + ZPL
      ------------------------------------------------------------------------ */
   function renderLivePreview() {
@@ -200,7 +294,9 @@
     els.thermalLabel.style.aspectRatio = ratio.toFixed(3) + ' / 1';
     els.previewMetaChip.textContent = calibration.widthMm + ' × ' + calibration.heightMm + ' mm · ' + calibration.dpi + ' dpi';
 
-    // Textos térmicos
+    // Eslogan BIPA y 3 líneas térmicas
+    els.previewSlogan.hidden = !lines.showSlogan;
+    els.previewSlogan.textContent = BipaZPL.BIPA_SLOGAN;
     els.previewLine1.textContent = lines.line1 || '—';
     els.previewLine2.textContent = lines.line2 || '\u00A0';
     els.previewLine3.textContent = lines.line3 || '\u00A0';
@@ -211,13 +307,19 @@
       lastQrPayloadRendered = lines.qrPayload;
     }
 
+    // Recuadro compacto con el texto exacto del QR en tiempo real
+    els.previewQrModeBadge.textContent = QR_MODE_LABELS[formState.qrMode] || QR_MODE_LABELS.serial;
+    els.previewQrChars.textContent = lines.qrPayload.length + ' car.';
     els.previewQrPayload.textContent = lines.qrPayload;
+
+    // Métricas del panel Personalizado
+    renderCustomQrMetrics();
 
     // Indicador de lote correlativo
     if (formState.quantity > 1 && formState.autoincrement) {
       els.previewBatchBadge.textContent =
         formState.quantity + ' uds: ' + batch.firstCorrelative + ' → ' + batch.lastCorrelative;
-      els.previewBatchBadge.hidden = false;
+      els.previewBatchWrap.hidden = false;
       els.autoincrementHint.textContent =
         'Imprimirá del ' +
         batch.firstCorrelative +
@@ -228,11 +330,11 @@
         batch.nextSerial +
         '.';
     } else if (formState.autoincrement) {
-      els.previewBatchBadge.hidden = true;
+      els.previewBatchWrap.hidden = true;
       els.autoincrementHint.textContent =
         'Al imprimir avanzará automáticamente al ' + formState.prefix + batch.nextSerial + '.';
     } else {
-      els.previewBatchBadge.hidden = true;
+      els.previewBatchWrap.hidden = true;
       els.autoincrementHint.textContent =
         'Desactivado: todas las copias saldrán con ' + lines.correlative + '.';
     }
@@ -270,12 +372,14 @@
     els.zplCodeOutput.textContent = batch.zpl;
   }
 
-  function persistCorrelative() {
+  function persistState() {
     BipaStorage.saveCorrelativeState({
       prefix: formState.prefix,
       serial: formState.serial,
       autoincrement: formState.autoincrement,
-      qrMode: formState.qrMode
+      showSlogan: formState.showSlogan,
+      qrMode: formState.qrMode,
+      customQrText: formState.customQrText
     });
   }
 
@@ -283,8 +387,66 @@
     if (!formState.autoincrement) return;
     formState.serial = batch.nextSerial;
     els.inputSerial.value = formState.serial;
-    persistCorrelative();
+    persistState();
     renderLivePreview();
+  }
+
+  /* ------------------------------------------------------------------------
+     Acciones del editor QR (Pegar / Limpiar / Tocar en vista previa)
+     ------------------------------------------------------------------------ */
+  function openQrEditorForEdit(preferCustom) {
+    if (preferCustom && formState.qrMode !== 'custom') {
+      if (!formState.customQrText.trim()) {
+        // Precargar el texto actual como punto de partida cómodo solo si estaba vacío
+        const currentLines = BipaZPL.buildLabelLines(formState);
+        formState.customQrText = currentLines.qrPayload;
+        els.inputCustomQr.value = formState.customQrText;
+      }
+      formState.qrMode = 'custom';
+      setQrModeButtons('custom');
+      persistState();
+      renderLivePreview();
+    }
+
+    if (formState.qrMode === 'custom') {
+      focusAndScrollTo(els.inputCustomQr, els.qrEditorSection, false);
+    } else {
+      focusAndScrollTo(els.qrModeCustom, els.qrEditorSection, false);
+    }
+  }
+
+  async function handlePasteQr() {
+    if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
+      els.inputCustomQr.focus();
+      showToast('Mantén presionado el campo para pegar desde tu teléfono');
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        showToast('El portapapeles está vacío');
+        return;
+      }
+      formState.customQrText = text.slice(0, 280);
+      els.inputCustomQr.value = formState.customQrText;
+      persistState();
+      renderLivePreview();
+      els.inputCustomQr.focus();
+      showToast('Texto pegado en el QR');
+    } catch (_err) {
+      els.inputCustomQr.focus();
+      showToast('Permite acceso al portapapeles o pega manualmente en el campo');
+    }
+  }
+
+  function handleClearQr() {
+    formState.customQrText = '';
+    els.inputCustomQr.value = '';
+    persistState();
+    renderLivePreview();
+    els.inputCustomQr.focus();
+    showToast('Texto personalizado limpiado');
   }
 
   /* ------------------------------------------------------------------------
@@ -325,7 +487,6 @@
       return;
     }
 
-    // Si aún no está conectada, abrir el selector USB directamente para un flujo más ágil
     if (!BipaZebraUSB.isConnected()) {
       try {
         await BipaZebraUSB.connect({ broadMode: false });
@@ -409,6 +570,51 @@
     });
     els.btnCloseAlert.addEventListener('click', hideAlert);
 
+    // Interactividad directa en la vista previa térmica
+    els.previewTapQr.addEventListener('click', function () {
+      openQrEditorForEdit(false);
+    });
+    els.btnQuickEditQr.addEventListener('click', function () {
+      openQrEditorForEdit(true);
+    });
+    els.previewSlogan.addEventListener('click', function () {
+      focusAndScrollTo(els.toggleSlogan, els.sloganToggleCard, false);
+    });
+    els.previewLine1.addEventListener('click', function () {
+      focusAndScrollTo(els.inputSerial, null, true);
+    });
+    els.previewLine2.addEventListener('click', function () {
+      focusAndScrollTo(els.inputCode, null, true);
+    });
+    els.previewLine3.addEventListener('click', function () {
+      focusAndScrollTo(els.inputWeight, null, true);
+    });
+
+    // Pestañas del bloque "Contenido del código QR" (3 modos)
+    [els.qrModeSerial, els.qrModeAll, els.qrModeCustom].forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const nextMode = btn.dataset.qrMode;
+        formState.qrMode = nextMode === 'all' || nextMode === 'custom' ? nextMode : 'serial';
+        setQrModeButtons(formState.qrMode);
+        persistState();
+        renderLivePreview();
+        if (formState.qrMode === 'custom') {
+          setTimeout(function () {
+            els.inputCustomQr.focus();
+          }, 80);
+        }
+      });
+    });
+
+    // Edición del QR personalizado + Pegar / Limpiar
+    els.inputCustomQr.addEventListener('input', function () {
+      readFormStateFromInputs();
+      persistState();
+      renderLivePreview();
+    });
+    els.btnPasteQr.addEventListener('click', handlePasteQr);
+    els.btnClearQr.addEventListener('click', handleClearQr);
+
     // Campos de texto en tiempo real
     const textInputs = [
       els.inputPrefix,
@@ -422,27 +628,22 @@
       input.addEventListener('input', function () {
         readFormStateFromInputs();
         if (input === els.inputPrefix || input === els.inputSerial) {
-          persistCorrelative();
+          persistState();
         }
         renderLivePreview();
       });
     });
 
-    // Switch autoincremento
+    // Switches autoincremento y eslogan
     els.toggleAutoincrement.addEventListener('change', function () {
       readFormStateFromInputs();
-      persistCorrelative();
+      persistState();
       renderLivePreview();
     });
-
-    // Selector modo QR
-    [els.qrModeSerial, els.qrModeAll].forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        formState.qrMode = btn.dataset.qrMode === 'all' ? 'all' : 'serial';
-        setQrModeButtons(formState.qrMode);
-        persistCorrelative();
-        renderLivePreview();
-      });
+    els.toggleSlogan.addEventListener('change', function () {
+      readFormStateFromInputs();
+      persistState();
+      renderLivePreview();
     });
 
     // Stepper cantidad
@@ -472,7 +673,7 @@
     els.btnPrintUsb.addEventListener('click', handlePrintUsb);
     els.btnPrintRawbt.addEventListener('click', handlePrintRawbt);
 
-    // Calibración: DPI (ajusta proporcionalmente factor QR al cambiar 203 <-> 300 si estaba en valor estándar)
+    // Calibración: DPI
     [els.btnDpi203, els.btnDpi300].forEach(function (btn) {
       btn.addEventListener('click', function () {
         const nextDpi = Number(btn.dataset.dpi) === 300 ? 300 : 203;
@@ -482,7 +683,6 @@
         calibration.dpi = nextDpi;
         setDpiButtons(nextDpi);
 
-        // Escalar factor QR proporcionalmente para mantener tamaño físico similar en mm
         const scaledMag = Math.max(1, Math.min(10, Math.round(calibration.qrMag * (nextDpi / prevDpi))));
         els.inputQrMag.value = String(scaledMag);
         readCalibrationFromInputs();
@@ -555,7 +755,6 @@
     BipaZebraUSB.init(renderPrinterStatus);
     renderPrinterStatus({ connected: false });
 
-    // Reconectar si el usuario ya concedió permiso previamente a la Zebra
     BipaZebraUSB.tryAutoReconnect();
     registerServiceWorker();
   }

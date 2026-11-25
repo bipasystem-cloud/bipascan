@@ -1,10 +1,13 @@
 /**
  * BIPA Etiquetas QR · Motor ZPL II nativo para Zebra ZD410
  * Ajusta automáticamente coordenadas y tipografía entre 203 dpi y 300 dpi,
- * aplica offsets X/Y en dots y soporta correlativos con ceros a la izquierda.
+ * incluye eslogan BIPA con ^CI28 (UTF-8), soporta modo QR personalizado,
+ * offsets X/Y en dots y correlativos con ceros a la izquierda.
  */
 (function (global) {
   'use strict';
+
+  const BIPA_SLOGAN = 'BIPA · Buenas ideas puestas en acción';
 
   /**
    * Suma un desplazamiento entero a un correlativo numérico conservando
@@ -33,7 +36,7 @@
   }
 
   /**
-   * Construye las 3 líneas de texto y el contenido del código QR para una etiqueta.
+   * Construye el eslogan opcional, las 3 líneas de texto y el contenido del QR.
    */
   function buildLabelLines(data, serialOverride) {
     const prefix = String(data.prefix || '');
@@ -42,6 +45,7 @@
     const lot = String(data.lot || '').trim();
     const weight = String(data.weight || '').trim();
     const expiry = String(data.expiry || '').trim();
+    const showSlogan = data.showSlogan !== false;
 
     const correlative = prefix + serial;
 
@@ -63,32 +67,49 @@
       line3 = 'vence ' + expiry;
     }
 
-    const qrPayload =
-      data.qrMode === 'all'
-        ? [correlative, code, lot, weight, expiry].join('|')
-        : correlative;
+    let qrPayload = correlative;
+    let isCustomEmpty = false;
+
+    if (data.qrMode === 'all') {
+      qrPayload = [correlative, code, lot, weight, expiry].join('|');
+    } else if (data.qrMode === 'custom') {
+      const customRaw = String(data.customQrText || '').trim();
+      if (customRaw.length > 0) {
+        qrPayload = customRaw;
+      } else {
+        qrPayload = correlative || BIPA_SLOGAN;
+        isCustomEmpty = true;
+      }
+    }
 
     return {
       correlative: correlative,
+      slogan: showSlogan ? BIPA_SLOGAN : '',
+      showSlogan: showSlogan,
       line1: correlative,
       line2: line2,
       line3: line3,
-      qrPayload: qrPayload || ' '
+      qrPayload: qrPayload || ' ',
+      isCustomEmpty: isCustomEmpty
     };
   }
 
   /**
    * Estima la cantidad de módulos por lado del QR (EC Level M) para calcular
-   * un espacio horizontal preciso entre el QR y las 3 líneas de texto.
+   * un espacio horizontal preciso entre el QR y el bloque derecho de texto.
    */
   function estimateQrModules(payload) {
-    const len = String(payload || '').length;
-    if (len <= 14) return 21; // v1
-    if (len <= 26) return 25; // v2
-    if (len <= 42) return 29; // v3
-    if (len <= 62) return 33; // v4
-    if (len <= 84) return 37; // v5
-    return 41;                // v6+
+    const len = typeof TextEncoder !== 'undefined'
+      ? new TextEncoder().encode(String(payload || '')).length
+      : String(payload || '').length;
+    if (len <= 14) return 21;  // v1
+    if (len <= 26) return 25;  // v2
+    if (len <= 42) return 29;  // v3
+    if (len <= 62) return 33;  // v4
+    if (len <= 84) return 37;  // v5
+    if (len <= 106) return 41; // v6
+    if (len <= 122) return 45; // v7
+    return 49;                 // v8+
   }
 
   /**
@@ -97,12 +118,12 @@
    */
   function fitFontWidth(text, targetWidthDots, maxAvailableDots, minWidthDots) {
     const chars = Math.max(1, String(text || '').length);
-    // ^A0 tiene un factor de avance promedio aproximado de 0.62 del ancho especificado
-    const estimatedTotal = chars * targetWidthDots * 0.62;
+    // ^A0 tiene un factor de avance promedio aproximado de 0.60 del ancho especificado
+    const estimatedTotal = chars * targetWidthDots * 0.60;
     if (estimatedTotal <= maxAvailableDots) {
       return Math.round(targetWidthDots);
     }
-    const fitted = Math.floor(maxAvailableDots / (chars * 0.62));
+    const fitted = Math.floor(maxAvailableDots / (chars * 0.60));
     return Math.max(minWidthDots, fitted);
   }
 
@@ -133,34 +154,57 @@
     const qrY = Math.max(0, Math.max(Math.round(4 * scale), qrCenterY) + offY);
 
     // Inicio horizontal del bloque de texto a la derecha del QR
-    const qrGap = Math.round(16 * scale);
+    const qrGap = Math.round(14 * scale);
     const minTextX = Math.round(134 * scale);
-    const computedTextX = Math.max(minTextX, marginLeft + qrSizeDots + qrGap);
+    const maxTextX = Math.round(pw * 0.50);
+    const computedTextX = Math.min(maxTextX, Math.max(minTextX, marginLeft + qrSizeDots + qrGap));
     const textX = Math.max(0, computedTextX + offX);
     const availableTextWidth = Math.max(Math.round(80 * scale), pw - computedTextX - marginRight);
 
     // Tamaños de fuente ^A0 escalados por DPI y por alto de etiqueta
     const heightRatio = Math.max(0.8, Math.min(1.6, cal.heightMm / 20));
-    const f1H = Math.round(32 * scale * heightRatio);
-    const f1W = fitFontWidth(lines.line1, 25 * scale * heightRatio, availableTextWidth, Math.round(13 * scale));
+    const hasSlogan = Boolean(lines.showSlogan && lines.slogan);
 
-    const f2H = Math.round(20 * scale * heightRatio);
-    const f2W = fitFontWidth(lines.line2, 17 * scale * heightRatio, availableTextWidth, Math.round(10 * scale));
+    const fSloganH = Math.round(14 * scale * heightRatio);
+    const fSloganW = fitFontWidth(lines.slogan, 12 * scale * heightRatio, availableTextWidth, Math.round(8 * scale));
 
-    const f3H = Math.round(19 * scale * heightRatio);
-    const f3W = fitFontWidth(lines.line3, 16 * scale * heightRatio, availableTextWidth, Math.round(10 * scale));
+    const f1H = Math.round((hasSlogan ? 30 : 32) * scale * heightRatio);
+    const f1W = fitFontWidth(lines.line1, (hasSlogan ? 24 : 25) * scale * heightRatio, availableTextWidth, Math.round(13 * scale));
 
-    // Posición vertical centrada de las 3 líneas dentro del alto real de la etiqueta
-    const gap12 = Math.round(14 * scale * heightRatio);
-    const gap23 = Math.round(12 * scale * heightRatio);
-    const textBlockHeight = f1H + gap12 + f2H + gap23 + f3H;
-    const baseTextY = Math.max(Math.round(10 * scale), Math.round((ll - textBlockHeight) / 2));
+    const f2H = Math.round((hasSlogan ? 19 : 20) * scale * heightRatio);
+    const f2W = fitFontWidth(lines.line2, (hasSlogan ? 16 : 17) * scale * heightRatio, availableTextWidth, Math.round(10 * scale));
 
-    const y1 = Math.max(0, baseTextY + offY);
-    const y2 = Math.max(0, baseTextY + f1H + gap12 + offY);
-    const y3 = Math.max(0, baseTextY + f1H + gap12 + f2H + gap23 + offY);
+    const f3H = Math.round((hasSlogan ? 18 : 19) * scale * heightRatio);
+    const f3W = fitFontWidth(lines.line3, (hasSlogan ? 15 : 16) * scale * heightRatio, availableTextWidth, Math.round(10 * scale));
+
+    // Distribución vertical limpia y equilibrada en el bloque derecho
+    const gapSlogan = hasSlogan ? Math.round(10 * scale * heightRatio) : 0;
+    const gap12 = Math.round((hasSlogan ? 11 : 14) * scale * heightRatio);
+    const gap23 = Math.round((hasSlogan ? 9 : 12) * scale * heightRatio);
+
+    const textBlockHeight =
+      (hasSlogan ? fSloganH + gapSlogan : 0) +
+      f1H +
+      gap12 +
+      f2H +
+      gap23 +
+      f3H;
+
+    const baseTextY = Math.max(Math.round(8 * scale), Math.round((ll - textBlockHeight) / 2));
+
+    let cursorY = baseTextY;
+    const ySlogan = Math.max(0, cursorY + offY);
+    if (hasSlogan) {
+      cursorY += fSloganH + gapSlogan;
+    }
+    const y1 = Math.max(0, cursorY + offY);
+    cursorY += f1H + gap12;
+    const y2 = Math.max(0, cursorY + offY);
+    cursorY += f2H + gap23;
+    const y3 = Math.max(0, cursorY + offY);
 
     const safeQr = sanitizeZplField(lines.qrPayload);
+    const safeSlogan = sanitizeZplField(lines.slogan);
     const safeL1 = sanitizeZplField(lines.line1);
     const safeL2 = sanitizeZplField(lines.line2);
     const safeL3 = sanitizeZplField(lines.line3);
@@ -171,9 +215,14 @@
       '^PW' + pw,
       '^LL' + ll,
       '^LH0,0',
-      '^FO' + qrX + ',' + qrY + '^BQN,2,' + qrMag + '^FDMA,' + safeQr + '^FS',
-      '^FO' + textX + ',' + y1 + '^A0N,' + f1H + ',' + f1W + '^FD' + safeL1 + '^FS'
+      '^FO' + qrX + ',' + qrY + '^BQN,2,' + qrMag + '^FDMA,' + safeQr + '^FS'
     ];
+
+    if (hasSlogan && safeSlogan) {
+      zpl.push('^FO' + textX + ',' + ySlogan + '^A0N,' + fSloganH + ',' + fSloganW + '^FD' + safeSlogan + '^FS');
+    }
+
+    zpl.push('^FO' + textX + ',' + y1 + '^A0N,' + f1H + ',' + f1W + '^FD' + safeL1 + '^FS');
 
     if (safeL2) {
       zpl.push('^FO' + textX + ',' + y2 + '^A0N,' + f2H + ',' + f2W + '^FD' + safeL2 + '^FS');
@@ -233,6 +282,7 @@
   }
 
   global.BipaZPL = {
+    BIPA_SLOGAN: BIPA_SLOGAN,
     stepSerial: stepSerial,
     buildLabelLines: buildLabelLines,
     generateBatchZpl: generateBatchZpl
