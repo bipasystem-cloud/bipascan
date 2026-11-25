@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BIPA · Etiquetas QR (Zebra ZD410)</title>
+  <meta name="description" content="Generador e impresor de etiquetas térmicas con código QR para impresoras Zebra ZD410 vía USB OTG y RawBT. Productos BIPA.">
+  <meta name="theme-color" content="#286A4D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BIPA QR">
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./assets/favicon.png">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Lexend+Exa:wght@500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 1. Barra superior -->
+    <header class="topbar" role="banner">
+      <div class="topbar-row">
+        <div class="brand-group">
+          <div class="brand-logo-wrap">
+            <img
+              src="./assets/logo-bipa.png"
+              alt="BIPA · Buenas ideas puestas en acción"
+              class="brand-logo"
+              width="1024"
+              height="635"
+            >
+          </div>
+          <div class="brand-title-group">
+            <span class="brand-eyebrow">ETIQUETAS QR</span>
+            <h1 class="brand-title">Zebra ZD410</h1>
+          </div>
+        </div>
+
+        <div id="printerStatusBadge" class="status-pill is-disconnected" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="printerStatusText" class="status-text">Desconectada</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="btnConnectUsb" type="button" class="btn btn-primary btn-connect">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2v15"></path>
+            <path d="m8 6 4-4 4 4"></path>
+            <circle cx="12" cy="20" r="2"></circle>
+            <path d="M12 13l5-3V7"></path>
+            <rect x="15.5" y="4.5" width="3" height="3" rx="0.5"></rect>
+            <path d="M12 15l-5-3V9"></path>
+            <circle cx="7" cy="7.5" r="1.5"></circle>
+          </svg>
+          <span id="btnConnectLabel">Conectar Zebra (USB)</span>
+        </button>
+
+        <div class="connect-aux-row">
+          <span id="printerDeviceInfo" class="device-info">Cable USB OTG · VID 0x0A5F</span>
+          <button id="btnConnectAny" type="button" class="link-action">
+            Otro USB
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mensajes de estado / alerta -->
+    <div id="alertBanner" class="alert-banner" role="alert" aria-live="assertive" hidden>
+      <div class="alert-content">
+        <span id="alertIcon" class="alert-icon" aria-hidden="true"></span>
+        <p id="alertMessage" class="alert-message"></p>
+      </div>
+      <button id="btnCloseAlert" type="button" class="alert-close" aria-label="Cerrar aviso">×</button>
+    </div>
+
+    <main class="main-content">
+      <!-- 2. Vista previa en vivo de la etiqueta (siempre fondo blanco y tinta negra) -->
+      <section class="card preview-section" aria-labelledby="previewHeading">
+        <div class="section-header">
+          <div>
+            <span class="section-eyebrow">VISTA PREVIA EN VIVO</span>
+            <h2 id="previewHeading" class="section-title">Etiqueta térmica</h2>
+          </div>
+          <span id="previewMetaChip" class="meta-chip">50 × 20 mm · 203 dpi</span>
+        </div>
+
+        <div class="thermal-stage">
+          <div id="thermalLabel" class="thermal-label" aria-label="Vista previa de la etiqueta térmica">
+            <div class="thermal-qr-col">
+              <div id="qrCanvasWrap" class="thermal-qr-box" aria-label="Código QR de la etiqueta"></div>
+            </div>
+            <div class="thermal-text-col">
+              <div id="previewLine1" class="thermal-line thermal-line-1">PAR-0000009</div>
+              <div id="previewLine2" class="thermal-line thermal-line-2">EX116 · L 2609200449</div>
+              <div id="previewLine3" class="thermal-line thermal-line-3">25,00 kg · vence 09/2027</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-footer">
+          <div class="preview-qr-data">
+            <span class="preview-qr-label">QR:</span>
+            <code id="previewQrPayload" class="preview-qr-code">PAR-0000009</code>
+          </div>
+          <div id="previewBatchBadge" class="batch-badge" hidden></div>
+        </div>
+      </section>
+
+      <!-- 3. Formulario de datos -->
+      <section class="card form-section" aria-labelledby="formHeading">
+        <div class="section-header">
+          <div>
+            <span class="section-eyebrow">DATOS DE LA ETIQUETA</span>
+            <h2 id="formHeading" class="section-title">Contenido e impresión</h2>
+          </div>
+        </div>
+
+        <form id="labelForm" class="label-form" novalidate>
+          <!-- Prefijo y correlativo -->
+          <div class="field-grid field-grid-correlativo">
+            <div class="field">
+              <label for="inputPrefix" class="field-label">Prefijo</label>
+              <input
+                id="inputPrefix"
+                name="prefix"
+                type="text"
+                class="field-input font-mono"
+                value="PAR-"
+                maxlength="16"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                placeholder="PAR-"
+              >
+            </div>
+
+            <div class="field">
+              <label for="inputSerial" class="field-label">Número correlativo</label>
+              <input
+                id="inputSerial"
+                name="serial"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                class="field-input font-mono"
+                value="0000009"
+                maxlength="14"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="0000009"
+              >
+            </div>
+          </div>
+
+          <!-- Switch autoincremento -->
+          <div class="toggle-card">
+            <div class="toggle-copy">
+              <label for="toggleAutoincrement" class="toggle-title">Autoincrementar correlativo</label>
+              <p id="autoincrementHint" class="toggle-hint">
+                Avanza el número automáticamente al imprimir.
+              </p>
+            </div>
+            <label class="switch" aria-label="Autoincrementar correlativo">
+              <input id="toggleAutoincrement" type="checkbox" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <!-- Código y Lote -->
+          <div class="field-grid field-grid-two">
+            <div class="field">
+              <label for="inputCode" class="field-label">Código / Referencia</label>
+              <input
+                id="inputCode"
+                name="code"
+                type="text"
+                class="field-input"
+                value="EX116"
+                maxlength="24"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                placeholder="EX116"
+              >
+            </div>
+
+            <div class="field">
+              <label for="inputLot" class="field-label">Lote</label>
+              <input
+                id="inputLot"
+                name="lot"
+                type="text"
+                class="field-input font-mono"
+                value="2609200449"
+                maxlength="24"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="2609200449"
+              >
+            </div>
+          </div>
+
+          <!-- Peso y Vencimiento -->
+          <div class="field-grid field-grid-two">
+            <div class="field">
+              <label for="inputWeight" class="field-label">Peso</label>
+              <input
+                id="inputWeight"
+                name="weight"
+                type="text"
+                class="field-input"
+                value="25,00 kg"
+                maxlength="20"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="25,00 kg"
+              >
+            </div>
+
+            <div class="field">
+              <label for="inputExpiry" class="field-label">Vencimiento</label>
+              <input
+                id="inputExpiry"
+                name="expiry"
+                type="text"
+                class="field-input font-mono"
+                value="09/2027"
+                maxlength="16"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="09/2027"
+              >
+            </div>
+          </div>
+
+          <!-- Selector rápido contenido del QR -->
+          <div class="field">
+            <span class="field-label" id="qrModeLabel">Contenido codificado en el QR</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="qrModeLabel">
+              <button
+                type="button"
+                id="qrModeSerial"
+                class="segmented-btn is-active"
+                role="radio"
+                aria-checked="true"
+                data-qr-mode="serial"
+              >
+                <span class="segmented-title">Solo correlativo</span>
+                <span class="segmented-sub">PAR-0000009</span>
+              </button>
+              <button
+                type="button"
+                id="qrModeAll"
+                class="segmented-btn"
+                role="radio"
+                aria-checked="false"
+                data-qr-mode="all"
+              >
+                <span class="segmented-title">Todos los campos</span>
+                <span class="segmented-sub">Separados por |</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cantidad de etiquetas -->
+          <div class="field">
+            <label for="inputQuantity" class="field-label">Cantidad de etiquetas</label>
+            <div class="stepper">
+              <button id="btnQtyMinus" type="button" class="stepper-btn" aria-label="Disminuir cantidad">−</button>
+              <input
+                id="inputQuantity"
+                name="quantity"
+                type="number"
+                inputmode="numeric"
+                class="stepper-input font-mono"
+                value="1"
+                min="1"
+                max="500"
+                step="1"
+              >
+              <button id="btnQtyPlus" type="button" class="stepper-btn" aria-label="Aumentar cantidad">+</button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- 4. Acciones de impresión -->
+      <section class="print-actions" aria-label="Acciones de impresión">
+        <button id="btnPrintUsb" type="button" class="btn btn-print-primary">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span class="btn-text-stack">
+            <span id="btnPrintUsbLabel" class="btn-main-text">Imprimir en Zebra</span>
+            <span id="btnPrintUsbSub" class="btn-sub-text">Envío directo ZPL II por WebUSB</span>
+          </span>
+        </button>
+
+        <button id="btnPrintRawbt" type="button" class="btn btn-secondary">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>
+            <polyline points="7 11 12 16 17 11"></polyline>
+            <line x1="12" y1="4" x2="12" y2="16"></line>
+          </svg>
+          <span class="btn-text-stack">
+            <span class="btn-main-text">Imprimir vía RawBT</span>
+            <span class="btn-sub-text">Plan B si el navegador restringe WebUSB</span>
+          </span>
+        </button>
+      </section>
+
+      <!-- 5. Panel plegable Calibración y ZPL (cerrado por defecto) -->
+      <details id="calibrationPanel" class="card calibration-panel">
+        <summary class="calibration-summary">
+          <div class="calibration-summary-left">
+            <span class="section-eyebrow">AJUSTE TÉCNICO</span>
+            <span class="calibration-title">Calibración y ZPL</span>
+          </div>
+          <span class="chevron-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+        </summary>
+
+        <div class="calibration-body">
+          <!-- Resolución DPI -->
+          <div class="field">
+            <span class="field-label" id="dpiLabel">Resolución de impresora</span>
+            <div class="segmented segmented-compact" role="radiogroup" aria-labelledby="dpiLabel">
+              <button type="button" id="btnDpi203" class="segmented-btn is-active" role="radio" aria-checked="true" data-dpi="203">
+                <span class="segmented-title font-mono">203 dpi</span>
+                <span class="segmented-sub">8 dots/mm (estándar)</span>
+              </button>
+              <button type="button" id="btnDpi300" class="segmented-btn" role="radio" aria-checked="false" data-dpi="300">
+                <span class="segmented-title font-mono">300 dpi</span>
+                <span class="segmented-sub">12 dots/mm (alta)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tamaño en mm -->
+          <div class="field-grid field-grid-two">
+            <div class="field">
+              <label for="inputWidthMm" class="field-label">Ancho (mm)</label>
+              <input id="inputWidthMm" type="number" inputmode="decimal" class="field-input font-mono" value="50" min="25" max="120" step="1">
+            </div>
+            <div class="field">
+              <label for="inputHeightMm" class="field-label">Alto (mm)</label>
+              <input id="inputHeightMm" type="number" inputmode="decimal" class="field-input font-mono" value="20" min="12" max="100" step="1">
+            </div>
+          </div>
+
+          <!-- Desplazamiento X e Y en dots -->
+          <div class="field-grid field-grid-two">
+            <div class="field">
+              <label for="inputOffsetX" class="field-label">Desplazamiento X (dots)</label>
+              <div class="mini-stepper">
+                <button type="button" class="mini-step-btn" data-step-target="inputOffsetX" data-step-delta="-4" aria-label="Mover izquierda 4 dots">−</button>
+                <input id="inputOffsetX" type="number" inputmode="numeric" class="mini-step-input font-mono" value="0" min="-120" max="120" step="1">
+                <button type="button" class="mini-step-btn" data-step-target="inputOffsetX" data-step-delta="4" aria-label="Mover derecha 4 dots">+</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="inputOffsetY" class="field-label">Desplazamiento Y (dots)</label>
+              <div class="mini-stepper">
+                <button type="button" class="mini-step-btn" data-step-target="inputOffsetY" data-step-delta="-4" aria-label="Mover arriba 4 dots">−</button>
+                <input id="inputOffsetY" type="number" inputmode="numeric" class="mini-step-input font-mono" value="0" min="-120" max="120" step="1">
+                <button type="button" class="mini-step-btn" data-step-target="inputOffsetY" data-step-delta="4" aria-label="Mover abajo 4 dots">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Factor de tamaño QR (^BQN) -->
+          <div class="field">
+            <div class="label-with-value">
+              <label for="inputQrMag" class="field-label">Factor tamaño QR (<code class="inline-code">^BQN</code>)</label>
+              <span id="qrMagValue" class="value-badge font-mono">4</span>
+            </div>
+            <div class="range-row">
+              <span class="range-bound font-mono">1</span>
+              <input id="inputQrMag" type="range" class="bipa-range" min="1" max="10" step="1" value="4">
+              <span class="range-bound font-mono">10</span>
+            </div>
+            <p class="field-helper">
+              Recomendado: <strong class="font-mono">4</strong> para 203 dpi o <strong class="font-mono">6</strong> para 300 dpi en etiquetas de 50 × 20 mm.
+            </p>
+          </div>
+
+          <!-- Acciones ZPL y Restablecer -->
+          <div class="zpl-toolbar">
+            <button id="btnToggleZpl" type="button" class="btn btn-outline">
+              Ver código ZPL II
+            </button>
+            <button id="btnCopyZpl" type="button" class="btn btn-soft">
+              Copiar ZPL II
+            </button>
+          </div>
+
+          <div id="zplCodeContainer" class="zpl-code-container" hidden>
+            <div class="zpl-code-header">
+              <span id="zplStats" class="zpl-stats font-mono">1 etiqueta · 203 dpi</span>
+            </div>
+            <pre id="zplCodeOutput" class="zpl-code font-mono"></pre>
+          </div>
+
+          <div class="calibration-footer">
+            <button id="btnResetCalibration" type="button" class="link-action link-danger">
+              Restablecer calibración predeterminada
+            </button>
+          </div>
+        </div>
+      </details>
+    </main>
+
+    <footer class="app-footer">
+      <p>Productos BIPA · Valera, Venezuela</p>
+      <p class="footer-sub">www.productosbipa.com · @productosbipa</p>
+    </footer>
+  </div>
+
+  <!-- Toast flotante -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="./js/qrcode.js"></script>
+  <script src="./js/storage.js"></script>
+  <script src="./js/zpl.js"></script>
+  <script src="./js/zebra-usb.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,564 @@
+/**
+ * BIPA Etiquetas QR · Controlador principal de la aplicación
+ */
+(function () {
+  'use strict';
+
+  const els = {
+    printerStatusBadge: document.getElementById('printerStatusBadge'),
+    printerStatusText: document.getElementById('printerStatusText'),
+    printerDeviceInfo: document.getElementById('printerDeviceInfo'),
+    btnConnectUsb: document.getElementById('btnConnectUsb'),
+    btnConnectLabel: document.getElementById('btnConnectLabel'),
+    btnConnectAny: document.getElementById('btnConnectAny'),
+
+    alertBanner: document.getElementById('alertBanner'),
+    alertIcon: document.getElementById('alertIcon'),
+    alertMessage: document.getElementById('alertMessage'),
+    btnCloseAlert: document.getElementById('btnCloseAlert'),
+
+    previewMetaChip: document.getElementById('previewMetaChip'),
+    thermalLabel: document.getElementById('thermalLabel'),
+    qrCanvasWrap: document.getElementById('qrCanvasWrap'),
+    previewLine1: document.getElementById('previewLine1'),
+    previewLine2: document.getElementById('previewLine2'),
+    previewLine3: document.getElementById('previewLine3'),
+    previewQrPayload: document.getElementById('previewQrPayload'),
+    previewBatchBadge: document.getElementById('previewBatchBadge'),
+
+    inputPrefix: document.getElementById('inputPrefix'),
+    inputSerial: document.getElementById('inputSerial'),
+    toggleAutoincrement: document.getElementById('toggleAutoincrement'),
+    autoincrementHint: document.getElementById('autoincrementHint'),
+    inputCode: document.getElementById('inputCode'),
+    inputLot: document.getElementById('inputLot'),
+    inputWeight: document.getElementById('inputWeight'),
+    inputExpiry: document.getElementById('inputExpiry'),
+    qrModeSerial: document.getElementById('qrModeSerial'),
+    qrModeAll: document.getElementById('qrModeAll'),
+    inputQuantity: document.getElementById('inputQuantity'),
+    btnQtyMinus: document.getElementById('btnQtyMinus'),
+    btnQtyPlus: document.getElementById('btnQtyPlus'),
+
+    btnPrintUsb: document.getElementById('btnPrintUsb'),
+    btnPrintUsbLabel: document.getElementById('btnPrintUsbLabel'),
+    btnPrintUsbSub: document.getElementById('btnPrintUsbSub'),
+    btnPrintRawbt: document.getElementById('btnPrintRawbt'),
+
+    btnDpi203: document.getElementById('btnDpi203'),
+    btnDpi300: document.getElementById('btnDpi300'),
+    inputWidthMm: document.getElementById('inputWidthMm'),
+    inputHeightMm: document.getElementById('inputHeightMm'),
+    inputOffsetX: document.getElementById('inputOffsetX'),
+    inputOffsetY: document.getElementById('inputOffsetY'),
+    inputQrMag: document.getElementById('inputQrMag'),
+    qrMagValue: document.getElementById('qrMagValue'),
+    btnToggleZpl: document.getElementById('btnToggleZpl'),
+    btnCopyZpl: document.getElementById('btnCopyZpl'),
+    zplCodeContainer: document.getElementById('zplCodeContainer'),
+    zplStats: document.getElementById('zplStats'),
+    zplCodeOutput: document.getElementById('zplCodeOutput'),
+    btnResetCalibration: document.getElementById('btnResetCalibration'),
+
+    toast: document.getElementById('toast')
+  };
+
+  let calibration = BipaStorage.loadCalibration();
+  let formState = Object.assign({}, BipaStorage.DEFAULT_FORM, BipaStorage.loadCorrelativeState());
+  let lastQrPayloadRendered = null;
+  let toastTimer = null;
+  let isPrinting = false;
+
+  /* ------------------------------------------------------------------------
+     Avisos y Toast
+     ------------------------------------------------------------------------ */
+  function showAlert(message, type) {
+    const kind = type || 'error';
+    els.alertBanner.className = 'alert-banner is-' + kind;
+    els.alertIcon.textContent = kind === 'success' ? '✓' : kind === 'warning' ? '!' : '⚠';
+    els.alertMessage.textContent = message;
+    els.alertBanner.hidden = false;
+  }
+
+  function hideAlert() {
+    els.alertBanner.hidden = true;
+  }
+
+  function showToast(message) {
+    els.toast.textContent = message;
+    els.toast.hidden = false;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      els.toast.hidden = true;
+    }, 2800);
+  }
+
+  /* ------------------------------------------------------------------------
+     Estado de impresora
+     ------------------------------------------------------------------------ */
+  function renderPrinterStatus(info) {
+    const connected = Boolean(info && info.connected);
+
+    els.printerStatusBadge.classList.toggle('is-connected', connected);
+    els.printerStatusBadge.classList.toggle('is-disconnected', !connected);
+    els.printerStatusText.textContent = connected ? 'Conectada' : 'Desconectada';
+
+    els.btnConnectUsb.classList.toggle('is-connected', connected);
+    els.btnConnectLabel.textContent = connected ? 'Desconectar Zebra' : 'Conectar Zebra (USB)';
+
+    if (connected) {
+      els.printerDeviceInfo.textContent = info.deviceName || 'Zebra ZD410 conectada por USB';
+      els.btnConnectAny.textContent = 'Cambiar USB';
+      els.btnPrintUsbSub.textContent = 'Lista para enviar ZPL II directo por USB';
+    } else {
+      els.printerDeviceInfo.textContent = BipaZebraUSB.isWebUsbSupported()
+        ? 'Cable USB OTG · VID 0x0A5F'
+        : 'WebUSB no disponible · Usa RawBT';
+      els.btnConnectAny.textContent = 'Otro USB';
+      els.btnPrintUsbSub.textContent = 'Envío directo ZPL II por WebUSB';
+    }
+
+    if (info && info.reason === 'unplugged') {
+      showAlert('Se desconectó el cable USB OTG de la impresora Zebra. Vuelve a conectarlo para imprimir.', 'warning');
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     Sincronización UI <-> Estado
+     ------------------------------------------------------------------------ */
+  function applyStateToInputs() {
+    els.inputPrefix.value = formState.prefix;
+    els.inputSerial.value = formState.serial;
+    els.toggleAutoincrement.checked = formState.autoincrement;
+    els.inputCode.value = formState.code;
+    els.inputLot.value = formState.lot;
+    els.inputWeight.value = formState.weight;
+    els.inputExpiry.value = formState.expiry;
+    els.inputQuantity.value = String(formState.quantity);
+
+    setQrModeButtons(formState.qrMode);
+
+    // Calibración
+    setDpiButtons(calibration.dpi);
+    els.inputWidthMm.value = String(calibration.widthMm);
+    els.inputHeightMm.value = String(calibration.heightMm);
+    els.inputOffsetX.value = String(calibration.offsetX);
+    els.inputOffsetY.value = String(calibration.offsetY);
+    els.inputQrMag.value = String(calibration.qrMag);
+    els.qrMagValue.textContent = String(calibration.qrMag);
+  }
+
+  function setQrModeButtons(mode) {
+    const isSerial = mode !== 'all';
+    els.qrModeSerial.classList.toggle('is-active', isSerial);
+    els.qrModeSerial.setAttribute('aria-checked', String(isSerial));
+    els.qrModeAll.classList.toggle('is-active', !isSerial);
+    els.qrModeAll.setAttribute('aria-checked', String(!isSerial));
+  }
+
+  function setDpiButtons(dpi) {
+    const is203 = Number(dpi) !== 300;
+    els.btnDpi203.classList.toggle('is-active', is203);
+    els.btnDpi203.setAttribute('aria-checked', String(is203));
+    els.btnDpi300.classList.toggle('is-active', !is203);
+    els.btnDpi300.setAttribute('aria-checked', String(!is203));
+  }
+
+  function readFormStateFromInputs() {
+    const qtyRaw = parseInt(els.inputQuantity.value, 10);
+    formState.prefix = els.inputPrefix.value;
+    formState.serial = els.inputSerial.value;
+    formState.autoincrement = els.toggleAutoincrement.checked;
+    formState.code = els.inputCode.value;
+    formState.lot = els.inputLot.value;
+    formState.weight = els.inputWeight.value;
+    formState.expiry = els.inputExpiry.value;
+    formState.quantity = Number.isFinite(qtyRaw) ? Math.max(1, Math.min(500, qtyRaw)) : 1;
+  }
+
+  function readCalibrationFromInputs() {
+    calibration = BipaStorage.saveCalibration({
+      dpi: calibration.dpi,
+      widthMm: parseFloat(els.inputWidthMm.value) || 50,
+      heightMm: parseFloat(els.inputHeightMm.value) || 20,
+      offsetX: parseInt(els.inputOffsetX.value, 10) || 0,
+      offsetY: parseInt(els.inputOffsetY.value, 10) || 0,
+      qrMag: parseInt(els.inputQrMag.value, 10) || 4
+    });
+    els.qrMagValue.textContent = String(calibration.qrMag);
+  }
+
+  /* ------------------------------------------------------------------------
+     Render en vivo: Vista previa + ZPL
+     ------------------------------------------------------------------------ */
+  function renderLivePreview() {
+    const lines = BipaZPL.buildLabelLines(formState);
+    const batch = BipaZPL.generateBatchZpl(formState, calibration);
+
+    // Mantener proporción real de la etiqueta en mm (limitada para legibilidad móvil)
+    const ratio = Math.max(1.2, Math.min(4.0, calibration.widthMm / calibration.heightMm));
+    els.thermalLabel.style.aspectRatio = ratio.toFixed(3) + ' / 1';
+    els.previewMetaChip.textContent = calibration.widthMm + ' × ' + calibration.heightMm + ' mm · ' + calibration.dpi + ' dpi';
+
+    // Textos térmicos
+    els.previewLine1.textContent = lines.line1 || '—';
+    els.previewLine2.textContent = lines.line2 || '\u00A0';
+    els.previewLine3.textContent = lines.line3 || '\u00A0';
+
+    // Código QR SVG nítido (solo re-genera si cambió el payload)
+    if (lines.qrPayload !== lastQrPayloadRendered) {
+      els.qrCanvasWrap.innerHTML = BipaQR.toSvg(lines.qrPayload, 2);
+      lastQrPayloadRendered = lines.qrPayload;
+    }
+
+    els.previewQrPayload.textContent = lines.qrPayload;
+
+    // Indicador de lote correlativo
+    if (formState.quantity > 1 && formState.autoincrement) {
+      els.previewBatchBadge.textContent =
+        formState.quantity + ' uds: ' + batch.firstCorrelative + ' → ' + batch.lastCorrelative;
+      els.previewBatchBadge.hidden = false;
+      els.autoincrementHint.textContent =
+        'Imprimirá del ' +
+        batch.firstCorrelative +
+        ' al ' +
+        batch.lastCorrelative +
+        ' y dejará listo el ' +
+        formState.prefix +
+        batch.nextSerial +
+        '.';
+    } else if (formState.autoincrement) {
+      els.previewBatchBadge.hidden = true;
+      els.autoincrementHint.textContent =
+        'Al imprimir avanzará automáticamente al ' + formState.prefix + batch.nextSerial + '.';
+    } else {
+      els.previewBatchBadge.hidden = true;
+      els.autoincrementHint.textContent =
+        'Desactivado: todas las copias saldrán con ' + lines.correlative + '.';
+    }
+
+    // Etiqueta del botón principal de impresión
+    if (!isPrinting) {
+      els.btnPrintUsbLabel.textContent =
+        formState.quantity > 1
+          ? 'Imprimir ' + formState.quantity + ' etiquetas en Zebra'
+          : 'Imprimir en Zebra';
+    }
+
+    // Actualizar visor ZPL si está abierto
+    if (!els.zplCodeContainer.hidden) {
+      renderZplPreview(batch);
+    }
+
+    return batch;
+  }
+
+  function renderZplPreview(batchObj) {
+    const batch = batchObj || BipaZPL.generateBatchZpl(formState, calibration);
+    const labelWord = batch.count === 1 ? 'etiqueta' : 'etiquetas';
+    els.zplStats.textContent =
+      batch.count +
+      ' ' +
+      labelWord +
+      ' · ' +
+      calibration.dpi +
+      ' dpi · ' +
+      calibration.widthMm +
+      '×' +
+      calibration.heightMm +
+      ' mm';
+    els.zplCodeOutput.textContent = batch.zpl;
+  }
+
+  function persistCorrelative() {
+    BipaStorage.saveCorrelativeState({
+      prefix: formState.prefix,
+      serial: formState.serial,
+      autoincrement: formState.autoincrement,
+      qrMode: formState.qrMode
+    });
+  }
+
+  function advanceSerialAfterPrint(batch) {
+    if (!formState.autoincrement) return;
+    formState.serial = batch.nextSerial;
+    els.inputSerial.value = formState.serial;
+    persistCorrelative();
+    renderLivePreview();
+  }
+
+  /* ------------------------------------------------------------------------
+     Acciones USB y RawBT
+     ------------------------------------------------------------------------ */
+  async function handleConnectUsb(broadMode) {
+    hideAlert();
+
+    if (!broadMode && BipaZebraUSB.isConnected()) {
+      await BipaZebraUSB.disconnect();
+      showToast('Impresora desconectada');
+      return;
+    }
+
+    els.btnConnectUsb.disabled = true;
+    els.btnConnectAny.disabled = true;
+    try {
+      const name = await BipaZebraUSB.connect({ broadMode: broadMode });
+      showToast('Conectada: ' + name);
+    } catch (err) {
+      showAlert(err.message, 'error');
+    } finally {
+      els.btnConnectUsb.disabled = false;
+      els.btnConnectAny.disabled = false;
+    }
+  }
+
+  async function handlePrintUsb() {
+    hideAlert();
+    readFormStateFromInputs();
+    const batch = renderLivePreview();
+
+    if (!BipaZebraUSB.isWebUsbSupported()) {
+      showAlert(
+        'Este navegador no soporta WebUSB. Abre esta app en Google Chrome en Android (HTTPS) o pulsa «Imprimir vía RawBT».',
+        'warning'
+      );
+      return;
+    }
+
+    // Si aún no está conectada, abrir el selector USB directamente para un flujo más ágil
+    if (!BipaZebraUSB.isConnected()) {
+      try {
+        await BipaZebraUSB.connect({ broadMode: false });
+      } catch (err) {
+        showAlert(err.message, 'error');
+        return;
+      }
+    }
+
+    isPrinting = true;
+    els.btnPrintUsb.disabled = true;
+    els.btnPrintUsbLabel.textContent = 'Enviando a Zebra…';
+
+    try {
+      await BipaZebraUSB.printZpl(batch.zpl);
+      const msg =
+        batch.count === 1
+          ? 'Etiqueta ' + batch.firstCorrelative + ' enviada a Zebra.'
+          : batch.count + ' etiquetas (' + batch.firstCorrelative + ' a ' + batch.lastCorrelative + ') enviadas a Zebra.';
+      advanceSerialAfterPrint(batch);
+      showToast(msg);
+    } catch (err) {
+      showAlert(err.message, 'error');
+    } finally {
+      isPrinting = false;
+      els.btnPrintUsb.disabled = false;
+      renderLivePreview();
+    }
+  }
+
+  function handlePrintRawbt() {
+    hideAlert();
+    readFormStateFromInputs();
+    const batch = renderLivePreview();
+
+    try {
+      BipaZebraUSB.printViaRawBT(batch.zpl);
+      const msg =
+        batch.count === 1
+          ? 'Abriendo RawBT con ' + batch.firstCorrelative + '…'
+          : 'Abriendo RawBT (' + batch.count + ' etiquetas: ' + batch.firstCorrelative + ' → ' + batch.lastCorrelative + ')…';
+      advanceSerialAfterPrint(batch);
+      showToast(msg);
+    } catch (err) {
+      showAlert('No se pudo abrir RawBT: ' + err.message, 'error');
+    }
+  }
+
+  async function handleCopyZpl() {
+    const batch = BipaZPL.generateBatchZpl(formState, calibration);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(batch.zpl);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = batch.zpl;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      showToast('Código ZPL II copiado al portapapeles');
+    } catch (_err) {
+      showAlert('No se pudo copiar automáticamente. Abre «Ver código ZPL II» para seleccionarlo.', 'warning');
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     Eventos del DOM
+     ------------------------------------------------------------------------ */
+  function bindEvents() {
+    // Conexión USB
+    els.btnConnectUsb.addEventListener('click', function () {
+      handleConnectUsb(false);
+    });
+    els.btnConnectAny.addEventListener('click', function () {
+      handleConnectUsb(true);
+    });
+    els.btnCloseAlert.addEventListener('click', hideAlert);
+
+    // Campos de texto en tiempo real
+    const textInputs = [
+      els.inputPrefix,
+      els.inputSerial,
+      els.inputCode,
+      els.inputLot,
+      els.inputWeight,
+      els.inputExpiry
+    ];
+    textInputs.forEach(function (input) {
+      input.addEventListener('input', function () {
+        readFormStateFromInputs();
+        if (input === els.inputPrefix || input === els.inputSerial) {
+          persistCorrelative();
+        }
+        renderLivePreview();
+      });
+    });
+
+    // Switch autoincremento
+    els.toggleAutoincrement.addEventListener('change', function () {
+      readFormStateFromInputs();
+      persistCorrelative();
+      renderLivePreview();
+    });
+
+    // Selector modo QR
+    [els.qrModeSerial, els.qrModeAll].forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        formState.qrMode = btn.dataset.qrMode === 'all' ? 'all' : 'serial';
+        setQrModeButtons(formState.qrMode);
+        persistCorrelative();
+        renderLivePreview();
+      });
+    });
+
+    // Stepper cantidad
+    els.btnQtyMinus.addEventListener('click', function () {
+      readFormStateFromInputs();
+      formState.quantity = Math.max(1, formState.quantity - 1);
+      els.inputQuantity.value = String(formState.quantity);
+      renderLivePreview();
+    });
+    els.btnQtyPlus.addEventListener('click', function () {
+      readFormStateFromInputs();
+      formState.quantity = Math.min(500, formState.quantity + 1);
+      els.inputQuantity.value = String(formState.quantity);
+      renderLivePreview();
+    });
+    els.inputQuantity.addEventListener('input', function () {
+      readFormStateFromInputs();
+      renderLivePreview();
+    });
+    els.inputQuantity.addEventListener('blur', function () {
+      readFormStateFromInputs();
+      els.inputQuantity.value = String(formState.quantity);
+      renderLivePreview();
+    });
+
+    // Botones de impresión
+    els.btnPrintUsb.addEventListener('click', handlePrintUsb);
+    els.btnPrintRawbt.addEventListener('click', handlePrintRawbt);
+
+    // Calibración: DPI (ajusta proporcionalmente factor QR al cambiar 203 <-> 300 si estaba en valor estándar)
+    [els.btnDpi203, els.btnDpi300].forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const nextDpi = Number(btn.dataset.dpi) === 300 ? 300 : 203;
+        if (nextDpi === calibration.dpi) return;
+
+        const prevDpi = calibration.dpi;
+        calibration.dpi = nextDpi;
+        setDpiButtons(nextDpi);
+
+        // Escalar factor QR proporcionalmente para mantener tamaño físico similar en mm
+        const scaledMag = Math.max(1, Math.min(10, Math.round(calibration.qrMag * (nextDpi / prevDpi))));
+        els.inputQrMag.value = String(scaledMag);
+        readCalibrationFromInputs();
+        renderLivePreview();
+        showToast('Resolución cambiada a ' + nextDpi + ' dpi');
+      });
+    });
+
+    // Calibración: medidas, offsets y factor QR
+    [els.inputWidthMm, els.inputHeightMm, els.inputOffsetX, els.inputOffsetY, els.inputQrMag].forEach(function (input) {
+      input.addEventListener('input', function () {
+        readCalibrationFromInputs();
+        renderLivePreview();
+      });
+    });
+
+    // Botones -/+ de desplazamiento X e Y
+    document.querySelectorAll('.mini-step-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const target = document.getElementById(btn.dataset.stepTarget);
+        const delta = parseInt(btn.dataset.stepDelta, 10) || 0;
+        if (!target) return;
+        const current = parseInt(target.value, 10) || 0;
+        const next = Math.max(-120, Math.min(120, current + delta));
+        target.value = String(next);
+        readCalibrationFromInputs();
+        renderLivePreview();
+      });
+    });
+
+    // Ver / Copiar ZPL
+    els.btnToggleZpl.addEventListener('click', function () {
+      const opening = els.zplCodeContainer.hidden;
+      els.zplCodeContainer.hidden = !opening;
+      els.btnToggleZpl.textContent = opening ? 'Ocultar código ZPL II' : 'Ver código ZPL II';
+      if (opening) {
+        renderZplPreview();
+      }
+    });
+    els.btnCopyZpl.addEventListener('click', handleCopyZpl);
+
+    // Restablecer calibración
+    els.btnResetCalibration.addEventListener('click', function () {
+      calibration = BipaStorage.resetCalibration();
+      applyStateToInputs();
+      renderLivePreview();
+      showToast('Calibración restablecida (50 × 20 mm · 203 dpi)');
+    });
+  }
+
+  /* ------------------------------------------------------------------------
+     Registro de Service Worker (PWA standalone con rutas relativas)
+     ------------------------------------------------------------------------ */
+  function registerServiceWorker() {
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      navigator.serviceWorker.register('./sw.js').catch(function () {
+        // Ignorar silenciosamente si el entorno bloquea SW
+      });
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     Inicio
+     ------------------------------------------------------------------------ */
+  function init() {
+    applyStateToInputs();
+    bindEvents();
+    renderLivePreview();
+
+    BipaZebraUSB.init(renderPrinterStatus);
+    renderPrinterStatus({ connected: false });
+
+    // Reconectar si el usuario ya concedió permiso previamente a la Zebra
+    BipaZebraUSB.tryAutoReconnect();
+    registerServiceWorker();
+  }
+
+  init();
+})();
