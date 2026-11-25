@@ -1,5 +1,5 @@
 /* Service Worker · BIPA Etiquetas de Lote (rutas 100% relativas para GitHub Pages) */
-const CACHE_NAME = 'bipa-lotes-v5';
+const CACHE_NAME = 'bipa-lotes-v6';
 
 const APP_ASSETS = [
   './',

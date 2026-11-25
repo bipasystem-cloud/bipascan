@@ -1,6 +1,6 @@
 {
-  "name": "BIPA · Etiquetas de Lote",
-  "short_name": "BIPA Lotes",
+  "name": "Bipa etiquetas",
+  "short_name": "Bipa etiquetas",
   "description": "Generador e impresión de etiquetas térmicas de lote BIPA (57 × 19 mm) para Zebra ZD410 vía USB OTG y RawBT.",
   "start_url": "./",
   "scope": "./",
