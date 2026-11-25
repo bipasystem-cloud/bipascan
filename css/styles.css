@@ -69,6 +69,10 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .font-mono {
   font-family: var(--font-mono);
 }
@@ -382,12 +386,50 @@ body {
 }
 
 /* ==========================================================================
-   2. Vista previa térmica (SIEMPRE blanco puro y tinta negra pura, táctil)
+   2. Vista previa térmica (SIEMPRE blanco puro y tinta negra pura, sin desbordes)
    ========================================================================== */
-.preview-tap-hint {
+.preview-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: -4px 0 10px;
+  flex-wrap: wrap;
+}
+
+.preview-tap-hint {
+  margin: 0;
   font-size: 0.76rem;
   color: var(--text-secondary);
+}
+
+.btn-zoom-trigger {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid rgba(40, 106, 77, 0.28);
+  background: var(--surface-subtle);
+  color: var(--bipa-verde-bosque-oscuro);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-zoom-trigger:active {
+  transform: scale(0.96);
+  background: rgba(149, 207, 95, 0.30);
+}
+
+.btn-icon-xs {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 
 .thermal-stage {
@@ -395,38 +437,47 @@ body {
   background-image: radial-gradient(rgba(40, 106, 77, 0.08) 1px, transparent 1px);
   background-size: 12px 12px;
   border-radius: var(--radius-lg);
-  padding: 14px 12px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px dashed rgba(40, 106, 77, 0.24);
+  overflow: hidden;
 }
 
 .thermal-label {
   width: 100%;
-  max-width: 440px;
+  max-width: 460px;
   aspect-ratio: 50 / 20;
+  container-type: inline-size;
   background: #FFFFFF !important;
   color: #000000 !important;
   border: 1.5px solid #D5DBD0;
   border-radius: 10px;
   box-shadow: var(--shadow-label);
-  padding: 3% 3.8%;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  padding: 2.6cqw 3.4cqw;
+  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 4%;
+  gap: 3.2cqw;
   overflow: hidden;
   user-select: none;
+  position: relative;
 }
 
 .thermal-qr-col {
+  flex: 0 0 var(--qr-col-w, 34%);
+  width: var(--qr-col-w, 34%);
+  max-width: 38%;
   height: 100%;
-  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #FFFFFF;
+  overflow: hidden;
+  transition: width 0.16s ease, flex-basis 0.16s ease;
 }
 
 .thermal-tap-qr {
@@ -436,15 +487,18 @@ body {
   margin: 0;
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   background: #FFFFFF;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   transition: transform 0.12s ease, outline-color 0.15s ease;
   outline: 2px solid transparent;
-  outline-offset: 1px;
+  outline-offset: -1px;
   touch-action: manipulation;
 }
 
@@ -460,91 +514,129 @@ body {
 .thermal-qr-box {
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #FFFFFF;
+  overflow: hidden;
 }
 
 .thermal-qr-box svg {
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   display: block;
   shape-rendering: crispEdges;
 }
 
 .thermal-text-col {
+  flex: 1 1 0%;
+  min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
   text-align: left;
-  gap: 0.18em;
-  min-width: 0;
+  gap: 0.9cqw;
   color: #000000;
+  overflow: hidden;
 }
 
 .thermal-line {
   appearance: none;
   border: none;
   background: transparent;
-  padding: 1px 2px;
-  margin: 0 -2px;
-  border-radius: 4px;
+  padding: 0.3cqw 0.5cqw;
+  margin: 0 -0.5cqw;
+  border-radius: 3px;
   text-align: left;
-  width: calc(100% + 4px);
+  width: calc(100% + 1cqw);
+  max-width: calc(100% + 1cqw);
   color: #000000 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.14;
+  line-height: 1.12;
   cursor: pointer;
   touch-action: manipulation;
   transition: background-color 0.12s ease;
 }
 
-.thermal-line:hover,
-.thermal-line:focus-visible {
+.thermal-line.is-static {
+  cursor: default;
+}
+
+.thermal-line:not(.is-static):hover,
+.thermal-line:not(.is-static):focus-visible {
   background: rgba(0, 0, 0, 0.06);
   outline: none;
 }
 
-.thermal-line:active {
+.thermal-line:not(.is-static):active {
   background: rgba(0, 0, 0, 0.12);
 }
 
 .thermal-line[hidden] {
-  display: none;
+  display: none !important;
 }
 
-.thermal-line-slogan {
+/* Encabezado de marca monocromático: Logo BIPA negro puro + Lema */
+.thermal-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  margin-bottom: 0.4cqw;
+  min-width: 0;
+}
+
+.thermal-brand-logo {
+  display: block;
+  height: 4.8cqw;
+  width: auto;
+  max-width: 9cqw;
+  object-fit: contain;
+  flex-shrink: 0;
+  /* Convierte el PNG transparente oficial a monocromático negro puro (#000) sobre blanco */
+  filter: grayscale(1) contrast(1000%) brightness(0);
+}
+
+.thermal-slogan-text {
   font-family: var(--font-sans);
   font-weight: 700;
-  font-size: clamp(0.56rem, 2.25vw, 0.72rem);
-  letter-spacing: 0.01em;
-  line-height: 1.1;
-  margin-bottom: 0.06em;
+  font-size: 2.28cqw;
+  letter-spacing: 0.005em;
+  color: #000000 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  line-height: 1.15;
 }
 
 .thermal-line-1 {
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: clamp(0.95rem, 4.7vw, 1.38rem);
+  font-size: 6.2cqw;
   letter-spacing: -0.02em;
-  margin-bottom: 0.04em;
+  line-height: 1.06;
+  margin-bottom: 0.25cqw;
 }
 
 .thermal-line-2 {
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: clamp(0.70rem, 3.0vw, 0.92rem);
+  font-size: 3.9cqw;
   letter-spacing: -0.005em;
 }
 
 .thermal-line-3 {
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: clamp(0.68rem, 2.85vw, 0.88rem);
+  font-size: 3.65cqw;
 }
 
 /* Recuadro compacto y legible debajo de la vista previa con el texto exacto del QR */
@@ -654,6 +746,155 @@ body {
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   Modal de vista ampliada a pantalla completa
+   ========================================================================== */
+.zoom-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(20, 48, 35, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  gap: 12px;
+}
+
+.zoom-modal[hidden] {
+  display: none;
+}
+
+.zoom-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.zoom-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.zoom-eyebrow {
+  font-family: var(--font-eyebrow);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--bipa-lima-claro);
+}
+
+.zoom-title {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--bipa-blanco);
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--bipa-blanco);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zoom-btn[aria-pressed="true"] {
+  background: var(--bipa-verde-hoja);
+  border-color: var(--bipa-verde-lima);
+}
+
+.zoom-btn-close {
+  background: var(--bipa-blanco);
+  color: var(--bipa-verde-bosque-oscuro);
+  border-color: transparent;
+}
+
+.zoom-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.zoom-label-frame {
+  width: min(94vw, 860px);
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s ease;
+}
+
+.zoom-label-frame.is-rotated {
+  width: min(74dvh, 760px);
+  transform: rotate(90deg);
+}
+
+.thermal-label-zoomed {
+  max-width: none;
+  width: 100%;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+  border-color: #FFFFFF;
+}
+
+.zoom-modal-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.zoom-qr-summary {
+  width: 100%;
+  max-width: 640px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.zoom-qr-tag {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--bipa-lima-claro);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.zoom-qr-code {
+  font-size: 0.8rem;
+  color: var(--bipa-blanco);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ==========================================================================
@@ -906,7 +1147,7 @@ body {
   border-radius: 5px;
 }
 
-/* Switch Autoincremento y Eslogan */
+/* Switch Autoincremento y Encabezado de marca */
 .toggle-card {
   display: flex;
   align-items: center;
@@ -1397,7 +1638,7 @@ body {
   font-size: 0.86rem;
   font-weight: 600;
   box-shadow: 0 10px 26px rgba(29, 84, 60, 0.32);
-  z-index: 999;
+  z-index: 1300;
   max-width: calc(100vw - 32px);
   text-align: center;
   animation: toastIn 0.2s ease-out;

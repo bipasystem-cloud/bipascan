@@ -1,5 +1,5 @@
 /* Service Worker · BIPA Etiquetas QR (rutas 100% relativas para GitHub Pages) */
-const CACHE_NAME = 'bipa-qr-v2';
+const CACHE_NAME = 'bipa-qr-v3';
 
 const APP_ASSETS = [
   './',

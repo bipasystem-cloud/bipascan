@@ -24,10 +24,12 @@
     btnCloseAlert: document.getElementById('btnCloseAlert'),
 
     previewMetaChip: document.getElementById('previewMetaChip'),
+    btnOpenZoom: document.getElementById('btnOpenZoom'),
     thermalLabel: document.getElementById('thermalLabel'),
     previewTapQr: document.getElementById('previewTapQr'),
     qrCanvasWrap: document.getElementById('qrCanvasWrap'),
-    previewSlogan: document.getElementById('previewSlogan'),
+    previewBrandHeader: document.getElementById('previewBrandHeader'),
+    previewSloganText: document.getElementById('previewSloganText'),
     previewLine1: document.getElementById('previewLine1'),
     previewLine2: document.getElementById('previewLine2'),
     previewLine3: document.getElementById('previewLine3'),
@@ -37,6 +39,22 @@
     previewQrPayload: document.getElementById('previewQrPayload'),
     previewBatchWrap: document.getElementById('previewBatchWrap'),
     previewBatchBadge: document.getElementById('previewBatchBadge'),
+
+    zoomModal: document.getElementById('zoomModal'),
+    zoomModalTitle: document.getElementById('zoomModalTitle'),
+    btnToggleRotate: document.getElementById('btnToggleRotate'),
+    btnRotateLabel: document.getElementById('btnRotateLabel'),
+    btnCloseZoom: document.getElementById('btnCloseZoom'),
+    zoomStage: document.getElementById('zoomStage'),
+    zoomLabelFrame: document.getElementById('zoomLabelFrame'),
+    zoomThermalLabel: document.getElementById('zoomThermalLabel'),
+    zoomQrCanvasWrap: document.getElementById('zoomQrCanvasWrap'),
+    zoomBrandHeader: document.getElementById('zoomBrandHeader'),
+    zoomSloganText: document.getElementById('zoomSloganText'),
+    zoomLine1: document.getElementById('zoomLine1'),
+    zoomLine2: document.getElementById('zoomLine2'),
+    zoomLine3: document.getElementById('zoomLine3'),
+    zoomQrPayload: document.getElementById('zoomQrPayload'),
 
     qrEditorSection: document.getElementById('qrEditorSection'),
     qrModeSerial: document.getElementById('qrModeSerial'),
@@ -91,8 +109,10 @@
   let calibration = BipaStorage.loadCalibration();
   let formState = Object.assign({}, BipaStorage.DEFAULT_FORM, BipaStorage.loadCorrelativeState());
   let lastQrPayloadRendered = null;
+  let lastQrSvg = '';
   let toastTimer = null;
   let isPrinting = false;
+  let isZoomRotated = false;
 
   /* ------------------------------------------------------------------------
      Avisos, Toast y enfoque interactivo
@@ -139,6 +159,33 @@
         }
       }, 220);
     }
+  }
+
+  /* ------------------------------------------------------------------------
+     Modal de vista ampliada
+     ------------------------------------------------------------------------ */
+  function applyZoomRotation(rotated) {
+    isZoomRotated = Boolean(rotated);
+    els.zoomLabelFrame.classList.toggle('is-rotated', isZoomRotated);
+    els.btnToggleRotate.setAttribute('aria-pressed', String(isZoomRotated));
+    els.btnRotateLabel.textContent = isZoomRotated ? 'Horizontal' : 'Rotar 90°';
+  }
+
+  function openZoomModal() {
+    renderLivePreview();
+    // En teléfonos verticales, rotar 90° aprovecha toda la altura de la pantalla
+    const isPortraitMobile = window.innerHeight > window.innerWidth && window.innerWidth < 680;
+    applyZoomRotation(isPortraitMobile);
+    els.zoomModal.hidden = false;
+    document.body.classList.add('modal-open');
+    els.btnCloseZoom.focus();
+  }
+
+  function closeZoomModal() {
+    if (els.zoomModal.hidden) return;
+    els.zoomModal.hidden = true;
+    document.body.classList.remove('modal-open');
+    els.btnOpenZoom.focus();
   }
 
   /* ------------------------------------------------------------------------
@@ -283,27 +330,50 @@
   }
 
   /* ------------------------------------------------------------------------
-     Render en vivo: Vista previa + ZPL
+     Render en vivo: Vista previa principal, Modal ampliado y ZPL
      ------------------------------------------------------------------------ */
+  function applyLabelSurfaceGeometry(labelEl, metrics) {
+    labelEl.style.aspectRatio = calibration.widthMm + ' / ' + calibration.heightMm;
+    labelEl.style.setProperty('--qr-col-w', metrics.previewQrWidthPercent + '%');
+  }
+
   function renderLivePreview() {
     const lines = BipaZPL.buildLabelLines(formState);
+    const metrics = BipaZPL.computeLayoutMetrics(lines, calibration);
     const batch = BipaZPL.generateBatchZpl(formState, calibration);
+    const metaLabel = calibration.widthMm + ' × ' + calibration.heightMm + ' mm · ' + calibration.dpi + ' dpi';
 
-    // Mantener proporción real de la etiqueta en mm (limitada para legibilidad móvil)
-    const ratio = Math.max(1.2, Math.min(4.0, calibration.widthMm / calibration.heightMm));
-    els.thermalLabel.style.aspectRatio = ratio.toFixed(3) + ' / 1';
-    els.previewMetaChip.textContent = calibration.widthMm + ' × ' + calibration.heightMm + ' mm · ' + calibration.dpi + ' dpi';
+    // Proporción exacta en mm y ancho dinámico de la columna QR según calibración (^BQN)
+    applyLabelSurfaceGeometry(els.thermalLabel, metrics);
+    applyLabelSurfaceGeometry(els.zoomThermalLabel, metrics);
 
-    // Eslogan BIPA y 3 líneas térmicas
-    els.previewSlogan.hidden = !lines.showSlogan;
-    els.previewSlogan.textContent = BipaZPL.BIPA_SLOGAN;
-    els.previewLine1.textContent = lines.line1 || '—';
-    els.previewLine2.textContent = lines.line2 || '\u00A0';
-    els.previewLine3.textContent = lines.line3 || '\u00A0';
+    els.previewMetaChip.textContent = metaLabel;
+    els.zoomModalTitle.textContent = metaLabel;
 
-    // Código QR SVG nítido (solo re-genera si cambió el payload)
+    // Encabezado de marca monocromático (logo + eslogan) y 3 líneas térmicas
+    const showBrand = Boolean(lines.showSlogan);
+    const line1Text = lines.line1 || '—';
+    const line2Text = lines.line2 || '\u00A0';
+    const line3Text = lines.line3 || '\u00A0';
+
+    els.previewBrandHeader.hidden = !showBrand;
+    els.previewSloganText.textContent = BipaZPL.BIPA_SLOGAN;
+    els.previewLine1.textContent = line1Text;
+    els.previewLine2.textContent = line2Text;
+    els.previewLine3.textContent = line3Text;
+
+    // Sincronizar copia del modal ampliado
+    els.zoomBrandHeader.hidden = !showBrand;
+    els.zoomSloganText.textContent = BipaZPL.BIPA_SLOGAN;
+    els.zoomLine1.textContent = line1Text;
+    els.zoomLine2.textContent = line2Text;
+    els.zoomLine3.textContent = line3Text;
+
+    // Código QR SVG nítido (solo regenera si cambió el payload)
     if (lines.qrPayload !== lastQrPayloadRendered) {
-      els.qrCanvasWrap.innerHTML = BipaQR.toSvg(lines.qrPayload, 2);
+      lastQrSvg = BipaQR.toSvg(lines.qrPayload, 2);
+      els.qrCanvasWrap.innerHTML = lastQrSvg;
+      els.zoomQrCanvasWrap.innerHTML = lastQrSvg;
       lastQrPayloadRendered = lines.qrPayload;
     }
 
@@ -311,6 +381,7 @@
     els.previewQrModeBadge.textContent = QR_MODE_LABELS[formState.qrMode] || QR_MODE_LABELS.serial;
     els.previewQrChars.textContent = lines.qrPayload.length + ' car.';
     els.previewQrPayload.textContent = lines.qrPayload;
+    els.zoomQrPayload.textContent = lines.qrPayload;
 
     // Métricas del panel Personalizado
     renderCustomQrMetrics();
@@ -397,7 +468,6 @@
   function openQrEditorForEdit(preferCustom) {
     if (preferCustom && formState.qrMode !== 'custom') {
       if (!formState.customQrText.trim()) {
-        // Precargar el texto actual como punto de partida cómodo solo si estaba vacío
         const currentLines = BipaZPL.buildLabelLines(formState);
         formState.customQrText = currentLines.qrPayload;
         els.inputCustomQr.value = formState.customQrText;
@@ -477,6 +547,9 @@
   async function handlePrintUsb() {
     hideAlert();
     readFormStateFromInputs();
+    if (formState.showSlogan) {
+      await BipaZPL.loadLogo();
+    }
     const batch = renderLivePreview();
 
     if (!BipaZebraUSB.isWebUsbSupported()) {
@@ -517,9 +590,12 @@
     }
   }
 
-  function handlePrintRawbt() {
+  async function handlePrintRawbt() {
     hideAlert();
     readFormStateFromInputs();
+    if (formState.showSlogan) {
+      await BipaZPL.loadLogo();
+    }
     const batch = renderLivePreview();
 
     try {
@@ -536,6 +612,9 @@
   }
 
   async function handleCopyZpl() {
+    if (formState.showSlogan) {
+      await BipaZPL.loadLogo();
+    }
     const batch = BipaZPL.generateBatchZpl(formState, calibration);
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -570,6 +649,23 @@
     });
     els.btnCloseAlert.addEventListener('click', hideAlert);
 
+    // Vista ampliada (modal fullscreen)
+    els.btnOpenZoom.addEventListener('click', openZoomModal);
+    els.btnCloseZoom.addEventListener('click', closeZoomModal);
+    els.btnToggleRotate.addEventListener('click', function () {
+      applyZoomRotation(!isZoomRotated);
+    });
+    els.zoomStage.addEventListener('click', function (ev) {
+      if (ev.target === els.zoomStage) {
+        closeZoomModal();
+      }
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !els.zoomModal.hidden) {
+        closeZoomModal();
+      }
+    });
+
     // Interactividad directa en la vista previa térmica
     els.previewTapQr.addEventListener('click', function () {
       openQrEditorForEdit(false);
@@ -577,7 +673,7 @@
     els.btnQuickEditQr.addEventListener('click', function () {
       openQrEditorForEdit(true);
     });
-    els.previewSlogan.addEventListener('click', function () {
+    els.previewBrandHeader.addEventListener('click', function () {
       focusAndScrollTo(els.toggleSlogan, els.sloganToggleCard, false);
     });
     els.previewLine1.addEventListener('click', function () {
@@ -634,7 +730,7 @@
       });
     });
 
-    // Switches autoincremento y eslogan
+    // Switches autoincremento y encabezado de marca
     els.toggleAutoincrement.addEventListener('change', function () {
       readFormStateFromInputs();
       persistState();
@@ -691,7 +787,7 @@
       });
     });
 
-    // Calibración: medidas, offsets y factor QR
+    // Calibración: medidas, offsets y factor QR (^BQN)
     [els.inputWidthMm, els.inputHeightMm, els.inputOffsetX, els.inputOffsetY, els.inputQrMag].forEach(function (input) {
       input.addEventListener('input', function () {
         readCalibrationFromInputs();
@@ -714,11 +810,14 @@
     });
 
     // Ver / Copiar ZPL
-    els.btnToggleZpl.addEventListener('click', function () {
+    els.btnToggleZpl.addEventListener('click', async function () {
       const opening = els.zplCodeContainer.hidden;
       els.zplCodeContainer.hidden = !opening;
       els.btnToggleZpl.textContent = opening ? 'Ocultar código ZPL II' : 'Ver código ZPL II';
       if (opening) {
+        if (formState.showSlogan) {
+          await BipaZPL.loadLogo();
+        }
         renderZplPreview();
       }
     });
@@ -751,6 +850,13 @@
     applyStateToInputs();
     bindEvents();
     renderLivePreview();
+
+    // Precargar logo oficial para generar el mapa de bits ^GFA en tiempo real
+    BipaZPL.loadLogo('./assets/logo-bipa.png').then(function () {
+      if (!els.zplCodeContainer.hidden) {
+        renderZplPreview();
+      }
+    });
 
     BipaZebraUSB.init(renderPrinterStatus);
     renderPrinterStatus({ connected: false });

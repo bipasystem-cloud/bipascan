@@ -81,7 +81,7 @@
     </div>
 
     <main class="main-content">
-      <!-- 2. Vista previa en vivo de la etiqueta (siempre fondo blanco y tinta negra, interactiva al toque) -->
+      <!-- 2. Vista previa en vivo de la etiqueta (siempre fondo blanco y tinta negra, interactiva) -->
       <section class="card preview-section" aria-labelledby="previewHeading">
         <div class="section-header">
           <div>
@@ -91,7 +91,18 @@
           <span id="previewMetaChip" class="meta-chip">50 × 20 mm · 203 dpi</span>
         </div>
 
-        <p class="preview-tap-hint">Toca el QR o cualquier línea de la etiqueta para editar al instante.</p>
+        <div class="preview-subbar">
+          <p class="preview-tap-hint">Toca el QR o cualquier línea para editar.</p>
+          <button id="btnOpenZoom" type="button" class="btn-zoom-trigger">
+            <svg class="btn-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+            <span>Ampliar etiqueta</span>
+          </button>
+        </div>
 
         <div class="thermal-stage">
           <div id="thermalLabel" class="thermal-label" aria-label="Vista previa interactiva de la etiqueta térmica">
@@ -111,12 +122,22 @@
             <div class="thermal-text-col">
               <button
                 type="button"
-                id="previewSlogan"
-                class="thermal-line thermal-line-slogan"
+                id="previewBrandHeader"
+                class="thermal-line thermal-brand-header"
                 data-preview-action="slogan"
-                aria-label="Mostrar u ocultar eslogan BIPA"
-                title="Tocar para ajustar el eslogan BIPA"
-              >BIPA · Buenas ideas puestas en acción</button>
+                aria-label="Mostrar u ocultar logo y eslogan BIPA"
+                title="Tocar para activar o desactivar el encabezado de marca"
+              >
+                <img
+                  src="./assets/logo-bipa.png"
+                  alt=""
+                  aria-hidden="true"
+                  class="thermal-brand-logo"
+                  width="1024"
+                  height="635"
+                >
+                <span id="previewSloganText" class="thermal-slogan-text">BIPA · Buenas ideas puestas en acción</span>
+              </button>
               <button
                 type="button"
                 id="previewLine1"
@@ -319,15 +340,15 @@
             </label>
           </div>
 
-          <!-- Switch Eslogan BIPA -->
+          <!-- Switch Encabezado de marca (Logo + Eslogan BIPA) -->
           <div id="sloganToggleCard" class="toggle-card">
             <div class="toggle-copy">
-              <label for="toggleSlogan" class="toggle-title">Mostrar eslogan BIPA</label>
+              <label for="toggleSlogan" class="toggle-title">Encabezado de marca BIPA</label>
               <p class="toggle-hint">
-                Incluye «BIPA · Buenas ideas puestas en acción» en la etiqueta.
+                Incluye el logo monocromático y «BIPA · Buenas ideas puestas en acción».
               </p>
             </div>
-            <label class="switch" aria-label="Mostrar eslogan BIPA en la etiqueta">
+            <label class="switch" aria-label="Mostrar logo y eslogan BIPA en la etiqueta">
               <input id="toggleSlogan" type="checkbox" checked>
               <span class="switch-slider"></span>
             </label>
@@ -558,6 +579,61 @@
       <p>Productos BIPA · Valera, Venezuela</p>
       <p class="footer-sub">www.productosbipa.com · @productosbipa</p>
     </footer>
+  </div>
+
+  <!-- Modal a pantalla completa: Vista ampliada de la etiqueta -->
+  <div id="zoomModal" class="zoom-modal" role="dialog" aria-modal="true" aria-labelledby="zoomModalTitle" hidden>
+    <div class="zoom-modal-topbar">
+      <div class="zoom-title-group">
+        <span class="zoom-eyebrow">VISTA AMPLIADA</span>
+        <h2 id="zoomModalTitle" class="zoom-title">50 × 20 mm · 203 dpi</h2>
+      </div>
+      <div class="zoom-controls">
+        <button id="btnToggleRotate" type="button" class="zoom-btn" aria-pressed="false" title="Rotar etiqueta 90 grados">
+          <svg class="btn-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-3-6.7"></path>
+            <polyline points="21 3 21 9 15 9"></polyline>
+          </svg>
+          <span id="btnRotateLabel">Rotar 90°</span>
+        </button>
+        <button id="btnCloseZoom" type="button" class="zoom-btn zoom-btn-close" aria-label="Cerrar vista ampliada">
+          Cerrar ×
+        </button>
+      </div>
+    </div>
+
+    <div id="zoomStage" class="zoom-stage">
+      <div id="zoomLabelFrame" class="zoom-label-frame">
+        <div id="zoomThermalLabel" class="thermal-label thermal-label-zoomed" aria-label="Etiqueta térmica ampliada">
+          <div class="thermal-qr-col">
+            <div id="zoomQrCanvasWrap" class="thermal-qr-box"></div>
+          </div>
+          <div class="thermal-text-col">
+            <div id="zoomBrandHeader" class="thermal-line thermal-brand-header is-static">
+              <img
+                src="./assets/logo-bipa.png"
+                alt=""
+                aria-hidden="true"
+                class="thermal-brand-logo"
+                width="1024"
+                height="635"
+              >
+              <span id="zoomSloganText" class="thermal-slogan-text">BIPA · Buenas ideas puestas en acción</span>
+            </div>
+            <div id="zoomLine1" class="thermal-line thermal-line-1 is-static">PAR-0000009</div>
+            <div id="zoomLine2" class="thermal-line thermal-line-2 is-static">EX116 · L 2609200449</div>
+            <div id="zoomLine3" class="thermal-line thermal-line-3 is-static">25,00 kg · vence 09/2027</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="zoom-modal-footer">
+      <div class="zoom-qr-summary">
+        <span class="zoom-qr-tag">QR:</span>
+        <code id="zoomQrPayload" class="zoom-qr-code font-mono">PAR-0000009</code>
+      </div>
+    </div>
   </div>
 
   <!-- Toast flotante -->

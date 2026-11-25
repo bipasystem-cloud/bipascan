@@ -503,7 +503,7 @@
       dim +
       ' ' +
       dim +
-      '" role="img" aria-label="Código QR">' +
+      '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Código QR">' +
       '<rect width="100%" height="100%" fill="#FFFFFF"/>' +
       '<path d="' +
       paths.join('') +
