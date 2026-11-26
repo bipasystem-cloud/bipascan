@@ -14,7 +14,7 @@
   const DEFAULT_CALIBRATION = Object.freeze({
     paperPreset: '50x30',
     dpi: 203,
-    widthMm: 50,
+    widthMm: 56,
     heightMm: 30,
     offsetX: 0,
     offsetY: 0,
@@ -66,11 +66,16 @@
 
     const dpi = Number(saved.dpi) === 300 ? 300 : 203;
     const paperPreset = normalizePreset(saved.paperPreset);
+    let widthMm = clampNum(saved.widthMm, 30, 120, DEFAULT_CALIBRATION.widthMm);
+    const heightMm = clampNum(saved.heightMm, 12, 100, DEFAULT_CALIBRATION.heightMm);
+    if (paperPreset === '50x30' && widthMm === 50 && heightMm === 30) {
+      widthMm = 56;
+    }
     return {
       paperPreset: paperPreset,
       dpi: dpi,
-      widthMm: clampNum(saved.widthMm, 30, 120, DEFAULT_CALIBRATION.widthMm),
-      heightMm: clampNum(saved.heightMm, 12, 100, DEFAULT_CALIBRATION.heightMm),
+      widthMm: widthMm,
+      heightMm: heightMm,
       offsetX: Math.round(clampNum(saved.offsetX, -120, 120, 0)),
       offsetY: Math.round(clampNum(saved.offsetY, -120, 120, 0)),
       darkness: Math.round(clampNum(saved.darkness, 5, 30, DEFAULT_CALIBRATION.darkness)),

@@ -901,27 +901,27 @@ body.role-operator #thermalLabel .thermal-lot-row {
   flex-basis: 17cqw;
 }
 
-/* Ajustes visuales para Preset Grande (50 x 30 mm): ^PW448, logo X=6..116, divisor X=124, título 1 línea y Neto muy grande */
+/* Ajustes visuales para Preset Grande (56 x 30 mm): ^PW448, logo X=4..170 (~38%), divisor X=178, texto X=188..444 */
 .thermal-label.is-preset-50x30 {
-  padding: 2cqw 1cqw 2cqw 1.3cqw;
+  padding: 1.8cqw 1cqw 1.8cqw 0.9cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-standard-layout {
-  gap: 1.5cqw;
+  gap: 1.4cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-divider {
-  flex-basis: 0.45cqw;
-  width: 0.45cqw;
-  margin: 2cqw 0;
+  flex-basis: 0.4cqw;
+  width: 0.4cqw;
+  margin: 1.8cqw 0;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-col {
-  gap: 1.8cqw;
+  gap: 1.5cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-title {
-  font-size: 5.4cqw;
+  font-size: 4.9cqw;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: normal;
-  margin-bottom: 1.6cqw;
+  margin-bottom: 1.3cqw;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -929,64 +929,64 @@ body.role-operator #thermalLabel .thermal-lot-row {
   -webkit-line-clamp: unset;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-subtitle {
-  font-size: 3.1cqw;
+  font-size: 2.9cqw;
   line-height: 1.1;
   letter-spacing: normal;
-  margin-bottom: 0.8cqw;
+  margin-bottom: 0.7cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-grid {
-  gap: 1.6cqw;
+  gap: 1.45cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row {
-  gap: 1.6cqw;
+  gap: 1.4cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:first-child {
-  margin-bottom: 0.9cqw;
+  margin-bottom: 0.8cqw;
   align-items: baseline;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:first-child .thermal-field-key {
-  font-size: 4.1cqw;
-  flex-basis: 17.5cqw;
+  font-size: 3.7cqw;
+  flex-basis: 15cqw;
   line-height: 1.1;
   letter-spacing: normal;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:first-child .thermal-field-val {
-  font-size: 4.9cqw;
+  font-size: 4.45cqw;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: normal;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:not(:first-child) .thermal-field-key,
 .thermal-label.is-preset-50x30 .thermal-lot-row:not(:first-child) .thermal-field-val {
-  font-size: 3.05cqw;
+  font-size: 2.9cqw;
   line-height: 1.15;
   letter-spacing: normal;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:not(:first-child) .thermal-field-key {
-  flex-basis: 17.5cqw;
+  flex-basis: 15cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-col {
-  gap: 1.1cqw;
+  gap: 1cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-title {
-  font-size: 4.8cqw;
-  margin-bottom: 0.4cqw;
+  font-size: 4.35cqw;
+  margin-bottom: 0.35cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-grid {
-  gap: 1.45cqw;
+  gap: 1.25cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:first-child {
-  margin-bottom: 0.7cqw;
+  margin-bottom: 0.6cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:first-child .thermal-field-key {
-  font-size: 3.85cqw;
+  font-size: 3.45cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:first-child .thermal-field-val {
-  font-size: 4.55cqw;
+  font-size: 4.15cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:not(:first-child) .thermal-field-key,
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:not(:first-child) .thermal-field-val {
-  font-size: 2.95cqw;
+  font-size: 2.8cqw;
 }
 
 /* Vista previa Código de Barras (1 o 2x2) */

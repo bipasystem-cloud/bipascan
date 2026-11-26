@@ -20,8 +20,8 @@
     }),
     '50x30': Object.freeze({
       id: '50x30',
-      label: 'Grande (50 × 30 mm)',
-      widthMm: 50,
+      label: 'Grande (56 × 30 mm)',
+      widthMm: 56,
       heightMm: 30,
       pw203: 448,
       ll203: 240
@@ -241,7 +241,7 @@
 
     let pw;
     let ll;
-    if (widthMm === 50 && heightMm === 30) {
+    if ((widthMm === 56 || widthMm === 50) && heightMm === 30 && presetId === '50x30') {
       pw = Math.round(PAPER_PRESETS['50x30'].pw203 * scale);
       ll = Math.round(PAPER_PRESETS['50x30'].ll203 * scale);
     } else if (widthMm === 50 && heightMm === 20) {
@@ -270,15 +270,15 @@
     let useShortNetLabel = false;
 
     if (presetId === '50x30') {
-      // Columna izquierda compacta X=6..116 (110 dots a 203 dpi) antes del separador en X=124
+      // Columna izquierda amplia X=4..170 (~162 dots a 203 dpi) antes del separador en X=178
       const logoMaxH = Math.round(ll * 0.84);
-      logoW = Math.round(110 * scale);
+      logoW = Math.round(162 * scale);
       logoH = Math.round(logoW / logoAspect);
       if (logoH > logoMaxH) {
         logoH = logoMaxH;
         logoW = Math.round(logoH * logoAspect);
       }
-      previewLogoColPct = 27.5;
+      previewLogoColPct = 38;
       useShortLabels = (template === 'lot');
     } else {
       const logoWidthRatio = isLargePreset
@@ -435,14 +435,14 @@
     let fullRightWidth;
 
     if (m.paperPreset === '50x30') {
-      marginLeft = Math.round(6 * scale);
+      marginLeft = Math.round(4 * scale);
       marginRight = Math.round(4 * scale);
       logoX = Math.max(0, marginLeft + offX);
       dividerThick = Math.max(2, Math.round(2 * scale));
-      dividerX = Math.max(0, Math.round(124 * scale) + offX);
+      dividerX = Math.max(0, Math.round(178 * scale) + offX);
       dividerY = Math.max(0, Math.round(14 * scale) + offY);
       dividerH = Math.max(20, Math.round(212 * scale));
-      colT = Math.max(0, Math.round(134 * scale) + offX);
+      colT = Math.max(0, Math.round(188 * scale) + offX);
       fullRightWidth = Math.max(
         Math.round(90 * scale),
         pw - (colT - offX) - marginRight
@@ -558,28 +558,31 @@
     const safeExp = sanitizeZplField(data.expiry || '');
 
     if (m.paperPreset === '50x30') {
-      // Preset 50 x 30 mm (^PW448, ^LL240 a 203 dpi): título SIEMPRE en 1 sola línea y bloque inferior compacto
+      // Preset Grande (56 x 30 mm, ^PW448, ^LL240 a 203 dpi): logo X=4..170, divisor X=178, textos X=188..444
       const titleChars = Math.max(1, safeTitle.length);
       let titleH;
       let targetW;
-      if (titleChars <= 18) {
+      if (titleChars <= 16) {
         titleH = Math.round((safeSubtitle ? 28 : 34) * scale);
-        targetW = Math.round((safeSubtitle ? 24 : 28) * scale);
-      } else if (titleChars <= 24) {
+        targetW = Math.round((safeSubtitle ? 21 : 24) * scale);
+      } else if (titleChars <= 22) {
         titleH = Math.round((safeSubtitle ? 26 : 32) * scale);
-        targetW = Math.round((safeSubtitle ? 21 : 23) * scale);
-      } else {
+        targetW = Math.round((safeSubtitle ? 19 : 21) * scale);
+      } else if (titleChars <= 28) {
         titleH = Math.round((safeSubtitle ? 26 : 30) * scale);
-        targetW = Math.round(19 * scale);
+        targetW = Math.round(18 * scale);
+      } else {
+        titleH = Math.round(26 * scale);
+        targetW = Math.round(15 * scale);
       }
       const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
-      const titleW = Math.max(Math.round(14 * scale), Math.min(targetW, maxFitW));
+      const titleW = Math.max(Math.round(12 * scale), Math.min(targetW, maxFitW));
 
       if (safeSubtitle) {
         const line1Y = Math.max(0, Math.round(12 * scale) + offY);
         const line2Y = Math.max(0, Math.round(42 * scale) + offY);
         const subH = Math.round(17 * scale);
-        const subW = fitFontWidth(safeSubtitle, 16 * scale, fullRightWidth, Math.round(11 * scale));
+        const subW = fitFontWidth(safeSubtitle, 15 * scale, fullRightWidth, Math.round(10 * scale));
         zpl.push('^FO' + colT + ',' + line1Y + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
         zpl.push('^FO' + colT + ',' + line2Y + '^A0N,' + subH + ',' + subW + '^FD' + safeSubtitle + '^FS');
       } else {
@@ -587,24 +590,24 @@
         zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
       }
 
-      // Columna de valores alineada en X=212 (203 dpi), dejando 232 dots libres hasta X=444
-      const colV = Math.round(212 * scale) + offX;
+      // Columna de valores alineada en X=256 (203 dpi), dejando 188 dots libres hasta X=444
+      const colV = Math.round(256 * scale) + offX;
       const maxValW = Math.max(Math.round(80 * scale), pw - (colV - offX) - marginRight);
 
       // Fila Neto (grande en Y=66)
       const netKeyY = Math.max(0, Math.round(68 * scale) + offY);
       const netValY = Math.max(0, Math.round(66 * scale) + offY);
-      const netKeyH = Math.round(25 * scale);
-      const netKeyW = Math.round(23 * scale);
+      const netKeyH = Math.round(24 * scale);
+      const netKeyW = Math.round(21 * scale);
       zpl.push('^FO' + colT + ',' + netKeyY + '^A0N,' + netKeyH + ',' + netKeyW + '^FDNeto:^FS');
       if (safeNet) {
-        const netValH = Math.round(29 * scale);
+        const netValH = Math.round(28 * scale);
         const maxNetFitW = Math.floor(maxValW / (Math.max(1, safeNet.length) * 0.52));
-        const netValW = Math.max(Math.round(19 * scale), Math.min(Math.round(27 * scale), maxNetFitW));
+        const netValW = Math.max(Math.round(16 * scale), Math.min(Math.round(24 * scale), maxNetFitW));
         zpl.push('^FO' + colV + ',' + netValY + '^A0N,' + netValH + ',' + netValW + '^FD' + safeNet + '^FS');
       }
 
-      // Filas inferiores de control (Y=108, Y=144, Y=180 sin hueco vacío debajo de Neto)
+      // Filas inferiores de control (Y=108, Y=144, Y=180)
       const metaH = Math.round(18 * scale);
       const metaW = Math.round(17 * scale);
       const metaRows = [
@@ -617,7 +620,7 @@
         const y = Math.max(0, Math.round(metaRows[i].y * scale) + offY);
         zpl.push('^FO' + colT + ',' + y + '^A0N,' + metaH + ',' + metaW + '^FD' + metaRows[i].label + '^FS');
         if (metaRows[i].value) {
-          const valW = fitFontWidth(metaRows[i].value, metaW, maxValW, Math.round(12 * scale));
+          const valW = fitFontWidth(metaRows[i].value, metaW, maxValW, Math.round(11 * scale));
           zpl.push('^FO' + colV + ',' + y + '^A0N,' + metaH + ',' + valW + '^FD' + metaRows[i].value + '^FS');
         }
       }

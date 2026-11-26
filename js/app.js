@@ -1257,7 +1257,7 @@
       calibration = BipaStorage.resetCalibration();
       applyCalibrationToInputs();
       renderLivePreview();
-      showToast('Calibración restablecida (50 × 30 mm · 203 dpi)');
+      showToast('Calibración restablecida (56 × 30 mm · 203 dpi)');
     });
   }
 
