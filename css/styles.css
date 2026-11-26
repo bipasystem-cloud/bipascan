@@ -935,13 +935,13 @@ body.role-operator #thermalLabel .thermal-lot-row {
   margin-bottom: 0.8cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-grid {
-  gap: 1.8cqw;
+  gap: 1.6cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row {
   gap: 1.6cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:first-child {
-  margin-bottom: 2.3cqw;
+  margin-bottom: 0.9cqw;
   align-items: baseline;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-row:first-child .thermal-field-key {
@@ -976,7 +976,7 @@ body.role-operator #thermalLabel .thermal-lot-row {
   gap: 1.45cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:first-child {
-  margin-bottom: 1.5cqw;
+  margin-bottom: 0.7cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-row:first-child .thermal-field-key {
   font-size: 3.85cqw;

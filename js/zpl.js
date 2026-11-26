@@ -231,61 +231,6 @@
     return Math.max(floorMin, fitted);
   }
 
-  function fitProportionalFont(text, targetHDots, targetWDots, maxAvailableDots, minHDots) {
-    const chars = Math.max(1, String(text || '').length);
-    const tH = Math.round(targetHDots);
-    const tW = Math.min(tH, Math.round(targetWDots));
-    const ratio = tH > 0 ? Math.max(0.88, Math.min(1, tW / tH)) : 1;
-    const floorH = Math.max(10, Math.round(minHDots || 12));
-    if (chars * tW * 0.54 <= maxAvailableDots) {
-      return { h: tH, w: tW };
-    }
-    const maxW = Math.floor(maxAvailableDots / (chars * 0.54));
-    const h = Math.max(floorH, Math.floor(maxW / ratio));
-    const w = Math.max(10, Math.min(h, Math.round(h * ratio)));
-    return { h: h, w: w };
-  }
-
-  function wrapTwoLines(text, maxCharsPerLine) {
-    const clean = sanitizeZplField(text);
-    if (!clean || clean.length <= maxCharsPerLine) {
-      return [clean];
-    }
-    const words = clean.split(/\s+/);
-    if (words.length < 2) {
-      return [clean.slice(0, maxCharsPerLine), clean.slice(maxCharsPerLine)];
-    }
-    let bestIdx = 1;
-    let bestDiff = Infinity;
-    for (let i = 1; i < words.length; i++) {
-      const left = words.slice(0, i).join(' ');
-      const right = words.slice(i).join(' ');
-      if (left.length <= maxCharsPerLine && right.length <= maxCharsPerLine) {
-        const diff = Math.abs(left.length - right.length);
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          bestIdx = i;
-        }
-      }
-    }
-    if (bestDiff < Infinity) {
-      return [words.slice(0, bestIdx).join(' '), words.slice(bestIdx).join(' ')];
-    }
-    let line1 = '';
-    let splitAt = 1;
-    for (let i = 0; i < words.length; i++) {
-      const candidate = line1 ? (line1 + ' ' + words[i]) : words[i];
-      if (candidate.length <= maxCharsPerLine || !line1) {
-        line1 = candidate;
-        splitAt = i + 1;
-      } else {
-        break;
-      }
-    }
-    const line2 = words.slice(splitAt).join(' ');
-    return line2 ? [line1, line2] : [line1];
-  }
-
   function computeLayoutMetrics(data, cal) {
     const dpi = Number(cal.dpi) === 300 ? 300 : 203;
     const dotsPerMm = dpi / 25.4;
@@ -613,57 +558,59 @@
     const safeExp = sanitizeZplField(data.expiry || '');
 
     if (m.paperPreset === '50x30') {
-      // Preset 50 x 30 mm (^PW448, ^LL240 a 203 dpi): título SIEMPRE en 1 sola línea, Neto grande, Lote/Elab./Venc. ordenados abajo
+      // Preset 50 x 30 mm (^PW448, ^LL240 a 203 dpi): título SIEMPRE en 1 sola línea y bloque inferior compacto
       const titleChars = Math.max(1, safeTitle.length);
       let titleH;
-      let titleW;
-      if (titleChars <= 22) {
-        titleH = Math.round((safeSubtitle ? 30 : 34) * scale);
-        const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
-        titleW = Math.max(Math.round(22 * scale), Math.min(Math.round((safeSubtitle ? 26 : 30) * scale), maxFitW));
+      let targetW;
+      if (titleChars <= 18) {
+        titleH = Math.round((safeSubtitle ? 28 : 34) * scale);
+        targetW = Math.round((safeSubtitle ? 24 : 28) * scale);
+      } else if (titleChars <= 24) {
+        titleH = Math.round((safeSubtitle ? 26 : 32) * scale);
+        targetW = Math.round((safeSubtitle ? 21 : 23) * scale);
       } else {
-        titleH = Math.round((safeSubtitle ? 28 : 30) * scale);
-        const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
-        const minTitleW = titleChars <= 30 ? Math.round(22 * scale) : Math.round(18 * scale);
-        titleW = Math.max(minTitleW, Math.min(Math.round(28 * scale), maxFitW));
+        titleH = Math.round((safeSubtitle ? 26 : 30) * scale);
+        targetW = Math.round(19 * scale);
       }
+      const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
+      const titleW = Math.max(Math.round(14 * scale), Math.min(targetW, maxFitW));
 
       if (safeSubtitle) {
-        const line1Y = Math.max(0, Math.round(10 * scale) + offY);
-        const line2Y = Math.max(0, Math.round(44 * scale) + offY);
-        const subH = Math.round(18 * scale);
-        const subW = fitFontWidth(safeSubtitle, 17 * scale, fullRightWidth, Math.round(11 * scale));
+        const line1Y = Math.max(0, Math.round(12 * scale) + offY);
+        const line2Y = Math.max(0, Math.round(42 * scale) + offY);
+        const subH = Math.round(17 * scale);
+        const subW = fitFontWidth(safeSubtitle, 16 * scale, fullRightWidth, Math.round(11 * scale));
         zpl.push('^FO' + colT + ',' + line1Y + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
         zpl.push('^FO' + colT + ',' + line2Y + '^A0N,' + subH + ',' + subW + '^FD' + safeSubtitle + '^FS');
       } else {
-        const titleY = Math.max(0, Math.round(18 * scale) + offY);
+        const titleY = Math.max(0, Math.round(20 * scale) + offY);
         zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
       }
 
-      // Columna de valores alineada en X=215 (203 dpi), dejando 229 dots libres hasta X=444
-      const colV = Math.round(215 * scale) + offX;
+      // Columna de valores alineada en X=212 (203 dpi), dejando 232 dots libres hasta X=444
+      const colV = Math.round(212 * scale) + offX;
       const maxValW = Math.max(Math.round(80 * scale), pw - (colV - offX) - marginRight);
 
-      // Fila Neto (segundo texto más grande, muy notorio en Y=68)
-      const netKeyY = Math.max(0, Math.round(71 * scale) + offY);
-      const netValY = Math.max(0, Math.round(68 * scale) + offY);
-      const netKeyH = Math.round(26 * scale);
-      const netKeyW = Math.round(24 * scale);
+      // Fila Neto (grande en Y=66)
+      const netKeyY = Math.max(0, Math.round(68 * scale) + offY);
+      const netValY = Math.max(0, Math.round(66 * scale) + offY);
+      const netKeyH = Math.round(25 * scale);
+      const netKeyW = Math.round(23 * scale);
       zpl.push('^FO' + colT + ',' + netKeyY + '^A0N,' + netKeyH + ',' + netKeyW + '^FDNeto:^FS');
       if (safeNet) {
-        const netValH = Math.round(30 * scale);
+        const netValH = Math.round(29 * scale);
         const maxNetFitW = Math.floor(maxValW / (Math.max(1, safeNet.length) * 0.52));
-        const netValW = Math.max(Math.round(20 * scale), Math.min(Math.round(28 * scale), maxNetFitW));
+        const netValW = Math.max(Math.round(19 * scale), Math.min(Math.round(27 * scale), maxNetFitW));
         zpl.push('^FO' + colV + ',' + netValY + '^A0N,' + netValH + ',' + netValW + '^FD' + safeNet + '^FS');
       }
 
-      // Filas inferiores de control (claramente más pequeñas: ^A0N,18,17 en Y=120, 154, 188)
+      // Filas inferiores de control (Y=108, Y=144, Y=180 sin hueco vacío debajo de Neto)
       const metaH = Math.round(18 * scale);
       const metaW = Math.round(17 * scale);
       const metaRows = [
-        { label: 'Lote:', value: safeLot, y: 120 },
-        { label: 'Elab.:', value: safeElab, y: 154 },
-        { label: 'Venc.:', value: safeExp, y: 188 }
+        { label: 'Lote:', value: safeLot, y: 108 },
+        { label: 'Elab.:', value: safeElab, y: 144 },
+        { label: 'Venc.:', value: safeExp, y: 180 }
       ];
 
       for (let i = 0; i < metaRows.length; i++) {
