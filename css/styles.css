@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BIPA · Etiquetas de Lote (Zebra ZD410)
+   BIPA · Etiquetas (Zebra ZD410)
    Paleta oficial según IDENTIDAD_BIPA.md (Línea clásica BIPA / Catálogo 2026)
    ========================================================================== */
 
@@ -77,6 +77,163 @@ body.modal-open {
   font-family: var(--font-mono);
 }
 
+/* ==========================================================================
+   0. Pantalla inicial de selección de perfil (Encargado / Admin)
+   ========================================================================== */
+.role-screen {
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.role-screen[hidden] {
+  display: none;
+}
+
+.role-card {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 24px 18px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.role-brand {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-logo {
+  height: 76px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.role-title {
+  margin: 2px 0 0;
+  font-size: 1.32rem;
+  font-weight: 800;
+  color: var(--bipa-verde-bosque);
+  letter-spacing: -0.02em;
+}
+
+.role-subtitle {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.role-options {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.role-btn-operator {
+  min-height: 72px;
+  padding: 15px 18px;
+  color: var(--bipa-blanco);
+  background: linear-gradient(105deg, var(--bipa-verde-bosque-oscuro) 0%, var(--bipa-verde-bosque) 42%, var(--bipa-verde-hoja) 100%);
+  box-shadow: var(--shadow-btn);
+  justify-content: flex-start;
+}
+
+.role-btn-admin {
+  min-height: 68px;
+  padding: 14px 18px;
+  color: var(--bipa-marron);
+  background: var(--bipa-crema-verdoso);
+  border: 1.5px solid rgba(126, 91, 85, 0.28);
+  justify-content: flex-start;
+}
+
+.role-btn-operator .btn-icon,
+.role-btn-admin .btn-icon {
+  padding: 6px;
+  box-sizing: content-box;
+  border-radius: 12px;
+}
+
+.role-btn-operator .btn-icon {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.role-btn-admin .btn-icon {
+  background: rgba(126, 91, 85, 0.12);
+}
+
+.pin-box {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+  border: 1px solid rgba(122, 154, 69, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pin-box[hidden] {
+  display: none;
+}
+
+.pin-input-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.pin-input {
+  flex: 1;
+  text-align: center;
+  letter-spacing: 0.28em;
+  font-size: 1.25rem !important;
+  background: var(--bipa-blanco) !important;
+}
+
+.pin-toggle-btn {
+  appearance: none;
+  border: 1.5px solid var(--border-subtle);
+  background: var(--bipa-blanco);
+  color: var(--bipa-verde-bosque);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.pin-error {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #8A3324;
+}
+
+.pin-error[hidden] {
+  display: none;
+}
+
+.pin-submit-btn {
+  min-height: 50px;
+}
+
+/* ==========================================================================
+   Shell principal y reglas estrictas por perfil (Encargado vs Admin)
+   ========================================================================== */
 .app-shell {
   width: 100%;
   max-width: 540px;
@@ -85,6 +242,29 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.app-shell[hidden] {
+  display: none;
+}
+
+/* En modo Encargado se ocultan por completo los controles de Administrador */
+body.role-operator #adminEditSection,
+body.role-operator #btnPrintRawbt,
+body.role-operator #calibrationPanel,
+body.role-operator #btnConnectAny,
+body.role-operator #adminCategoryTabs,
+body.role-operator #adminModeBadge,
+body.role-operator #previewTapHint {
+  display: none !important;
+}
+
+body.role-operator #thermalLabel .thermal-logo-btn,
+body.role-operator #thermalLabel .thermal-lot-title,
+body.role-operator #thermalLabel .thermal-lot-subtitle,
+body.role-operator #thermalLabel .thermal-lot-row {
+  pointer-events: none;
+  cursor: default;
 }
 
 /* ==========================================================================
@@ -103,9 +283,9 @@ body.modal-open {
 
 .topbar-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .brand-group {
@@ -155,6 +335,34 @@ body.modal-open {
   color: var(--bipa-verde-bosque);
   letter-spacing: -0.02em;
   line-height: 1.15;
+}
+
+.topbar-right-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.profile-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--bipa-verde-bosque-oscuro);
+  background: rgba(149, 207, 95, 0.30);
+  border: 1px solid rgba(122, 154, 69, 0.45);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.admin-badge[hidden] {
+  display: none;
 }
 
 /* Indicador de estado */
@@ -227,7 +435,7 @@ body.modal-open {
   border: none;
   padding: 4px 2px;
   font-family: var(--font-sans);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--bipa-verde-bosque);
   text-decoration: underline;
@@ -236,9 +444,8 @@ body.modal-open {
   flex-shrink: 0;
 }
 
-.link-action:hover,
-.link-action:focus-visible {
-  color: var(--bipa-verde-bosque-oscuro);
+.link-subtle {
+  color: var(--bipa-gris-calido);
 }
 
 .link-danger {
@@ -329,6 +536,10 @@ body.modal-open {
   transition: box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
+.card[hidden] {
+  display: none;
+}
+
 .is-highlighted {
   animation: pulseHighlight 1.1s ease;
 }
@@ -404,7 +615,7 @@ body.modal-open {
 }
 
 /* ==========================================================================
-   2. Vista previa térmica de Lote (57 x 19 mm, blanco y negro puro, sin desborde)
+   2. Vista previa térmica (57 x 19 mm, blanco y negro puro, sin desborde)
    ========================================================================== */
 .preview-subbar {
   display: flex;
@@ -436,12 +647,7 @@ body.modal-open {
   font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-}
-
-.btn-zoom-trigger:active {
-  transform: scale(0.96);
-  background: rgba(149, 207, 95, 0.30);
+  margin-left: auto;
 }
 
 .btn-icon-xs {
@@ -475,11 +681,22 @@ body.modal-open {
   box-shadow: var(--shadow-label);
   padding: 1.3cqw 1.8cqw;
   display: flex;
+  overflow: hidden;
+  user-select: none;
+}
+
+.thermal-standard-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
   flex-direction: row;
   align-items: stretch;
   gap: 1.4cqw;
-  overflow: hidden;
-  user-select: none;
+}
+
+.thermal-standard-layout[hidden],
+.thermal-barcode-layout[hidden] {
+  display: none !important;
 }
 
 .thermal-logo-col {
@@ -492,7 +709,6 @@ body.modal-open {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: width 0.16s ease, flex-basis 0.16s ease;
 }
 
 .thermal-logo-btn {
@@ -560,19 +776,12 @@ body.modal-open {
   color: #000000 !important;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background-color 0.12s ease;
 }
 
 .thermal-lot-title.is-static,
 .thermal-lot-subtitle.is-static,
 .thermal-lot-row.is-static {
   cursor: default;
-}
-
-.thermal-lot-title:not(.is-static):hover,
-.thermal-lot-subtitle:not(.is-static):hover,
-.thermal-lot-row:not(.is-static):hover {
-  background: rgba(0, 0, 0, 0.06);
 }
 
 .thermal-lot-title {
@@ -586,6 +795,37 @@ body.modal-open {
   letter-spacing: -0.015em;
 }
 
+.thermal-label.is-simple-template .thermal-lot-title {
+  font-size: 5.4cqw;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.thermal-simple-weight {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 4.1cqw;
+  color: #000000;
+}
+
+.thermal-shipping-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7cqw;
+}
+
+.thermal-ship-line {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 3.55cqw;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .thermal-lot-subtitle {
   font-family: var(--font-sans);
   font-weight: 700;
@@ -596,7 +836,10 @@ body.modal-open {
   text-overflow: ellipsis;
 }
 
-.thermal-lot-subtitle[hidden] {
+.thermal-lot-subtitle[hidden],
+.thermal-simple-weight[hidden],
+.thermal-shipping-lines[hidden],
+.thermal-lot-grid[hidden] {
   display: none !important;
 }
 
@@ -637,12 +880,10 @@ body.modal-open {
   text-overflow: ellipsis;
 }
 
-/* Estilo uniforme negrita fiel a imprimir.ps1 para Intenciones y Pack x2 */
 .thermal-label.is-uniform-bold .thermal-field-val {
   font-weight: 800;
 }
 
-/* Ajuste compacto cuando hay subtítulo (Pack x2) para que las 6 líneas respiren sin cortarse */
 .thermal-label.has-subtitle .thermal-lot-col {
   gap: 0.32cqw;
 }
@@ -658,6 +899,88 @@ body.modal-open {
 }
 .thermal-label.has-subtitle .thermal-field-key {
   flex-basis: 17cqw;
+}
+
+/* Vista previa Código de Barras (1 o 2x2) */
+.thermal-barcode-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thermal-barcode-layout.is-x4 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 1.2cqw 2cqw;
+}
+
+.barcode-cell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5cqw;
+  min-width: 0;
+  min-height: 0;
+}
+
+.barcode-title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 3.3cqw;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.barcode-bars {
+  width: 68%;
+  height: 12cqw;
+  background: repeating-linear-gradient(
+    90deg,
+    #000 0px, #000 2px,
+    #fff 2px, #fff 4px,
+    #000 4px, #000 5px,
+    #fff 5px, #fff 8px,
+    #000 8px, #000 11px,
+    #fff 11px, #fff 13px
+  );
+}
+
+.barcode-digits {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 2.7cqw;
+  letter-spacing: 0.12em;
+  color: #000000;
+}
+
+.barcode-cpe {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 2.5cqw;
+  color: #000000;
+}
+
+.thermal-barcode-layout.is-x4 .barcode-title {
+  font-size: 2.1cqw;
+}
+.thermal-barcode-layout.is-x4 .barcode-bars {
+  width: 78%;
+  height: 5.5cqw;
+}
+.thermal-barcode-layout.is-x4 .barcode-digits {
+  font-size: 1.75cqw;
+}
+.thermal-barcode-layout.is-x4 .barcode-cpe {
+  font-size: 1.65cqw;
 }
 
 /* ==========================================================================
@@ -776,7 +1099,7 @@ body.modal-open {
 }
 
 /* ==========================================================================
-   3. Selector / Buscador con 3 pestañas (Aromas, Intenciones, Pack x2)
+   3. Selector / Buscador y chips de Admin
    ========================================================================== */
 .catalog-section {
   display: flex;
@@ -842,6 +1165,38 @@ body.modal-open {
   line-height: 1.15;
 }
 
+.admin-category-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-category-chips[hidden] {
+  display: none;
+}
+
+.cat-chip {
+  appearance: none;
+  border: 1.5px solid var(--border-subtle);
+  background: var(--bipa-crema-verdoso);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 7px 11px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cat-chip.is-active {
+  background: var(--bipa-marron);
+  border-color: var(--bipa-marron);
+  color: var(--bipa-blanco);
+}
+
 .search-wrap {
   position: relative;
   display: flex;
@@ -869,7 +1224,6 @@ body.modal-open {
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
   outline: none;
-  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .search-input:focus {
@@ -924,11 +1278,6 @@ body.modal-open {
   cursor: pointer;
   font-family: var(--font-sans);
   touch-action: manipulation;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
-}
-
-.product-item:active {
-  transform: scale(0.985);
 }
 
 .product-item.is-selected {
@@ -1034,21 +1383,18 @@ body.modal-open {
 }
 
 /* ==========================================================================
-   4. Formulario dinámico de datos (mobile-first, controles amplios)
+   4. Formulario dinámico y cantidad
    ========================================================================== */
-.label-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.pack-fields {
+.label-form,
+.pack-fields,
+.lot-common-fields {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.pack-fields[hidden] {
+.pack-fields[hidden],
+.lot-common-fields[hidden] {
   display: none;
 }
 
@@ -1091,7 +1437,6 @@ body.modal-open {
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
   outline: none;
-  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .field-input.font-mono {
@@ -1105,7 +1450,6 @@ body.modal-open {
   box-shadow: 0 0 0 3px rgba(149, 207, 95, 0.30);
 }
 
-/* Prefijo inline "Vela Aromática" para Intenciones */
 .input-prefix-wrap {
   display: flex;
   align-items: stretch;
@@ -1113,7 +1457,6 @@ body.modal-open {
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .input-prefix-wrap:focus-within {
@@ -1151,7 +1494,6 @@ body.modal-open {
   border-radius: 5px;
 }
 
-/* Stepper de cantidad */
 .stepper {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr) 58px;
@@ -1171,7 +1513,6 @@ body.modal-open {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: transform 0.1s ease, background-color 0.15s ease;
   touch-action: manipulation;
 }
 
@@ -1197,12 +1538,6 @@ body.modal-open {
 .stepper-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-
-.stepper-input:focus {
-  background: var(--bipa-blanco);
-  border-color: var(--bipa-verde-bosque);
-  box-shadow: 0 0 0 3px rgba(149, 207, 95, 0.30);
 }
 
 /* ==========================================================================
@@ -1240,13 +1575,16 @@ body.modal-open {
   cursor: not-allowed;
 }
 
+.btn[hidden] {
+  display: none;
+}
+
 .btn-icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
 }
 
-/* Botón Conectar Zebra */
 .btn-primary {
   min-height: 52px;
   padding: 12px 18px;
@@ -1263,7 +1601,6 @@ body.modal-open {
   box-shadow: none;
 }
 
-/* Botón Imprimir en Zebra */
 .btn-print-primary {
   min-height: 66px;
   padding: 14px 20px;
@@ -1282,7 +1619,6 @@ body.modal-open {
   background: rgba(255, 255, 255, 0.16);
 }
 
-/* Botón secundario RawBT */
 .btn-secondary {
   min-height: 60px;
   padding: 12px 20px;
@@ -1568,7 +1904,6 @@ body.modal-open {
   }
 }
 
-/* Ajustes para pantallas muy pequeñas */
 @media (max-width: 360px) {
   .brand-logo {
     height: 30px;

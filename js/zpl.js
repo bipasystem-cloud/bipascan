@@ -1,9 +1,10 @@
 /**
- * BIPA Etiquetas de Lote · Motor ZPL II nativo para Zebra ZD410
- * Plantillas fieles a las 3 categorías de sistema/imprimir.ps1 (57 x 19 mm):
- * - Aromas (5 filas): logo ancho (172/456), divisoria x=178, título + Cont. Neto, Lote, Elaboración, Vencimiento
- * - Intenciones (5 filas): logo compacto (138/456), divisoria x=144, título "Vela Aromática ...", estilo uniforme
- * - Pack x2 (6 filas): logo compacto (138/456), divisoria x=144, título + subtítulo de aromas + 4 filas uniformes
+ * BIPA Etiquetas · Motor ZPL II nativo para Zebra ZD410
+ * Soporta todas las plantillas extraídas de ETIQUETAS LOTES (57 x 19 mm):
+ * - 'lot': Aromas (logo ancho 172/456, 5 filas), Intenciones y Pack x2 (logo compacto 138/456)
+ * - 'simple': Solo Aroma, Aroma 240 g, Muestras MM y Mechas (logo ^GFA + título grande + peso opcional)
+ * - 'shipping': Etiquetas de Envío (logo ^GFA + Envío a / Remite / Tel)
+ * - 'barcode': Códigos de barras EAN-13 (^BEN) + CPE (formato estándar GS1, medidas o 4 por etiqueta)
  */
 (function (global) {
   'use strict';
@@ -95,9 +96,6 @@
     return logoLoadPromise;
   }
 
-  /**
-   * Permite inyectar una fuente de imagen para pruebas automatizadas.
-   */
   function setLogoSource(img, bounds) {
     logoImage = img || null;
     logoCropBounds = bounds || (img ? computeImageBounds(img) : null);
@@ -198,9 +196,6 @@
     }
   }
 
-  /**
-   * Sanitiza texto para campos ^FD de ZPL II evitando comandos accidentales (^ o ~).
-   */
   function sanitizeZplField(text) {
     return String(text || '')
       .replace(/[\r\n\t]+/g, ' ')
@@ -208,9 +203,6 @@
       .trim();
   }
 
-  /**
-   * Ajusta el ancho de carácter en ^A0N para que el texto nunca se corte por el borde derecho.
-   */
   function fitFontWidth(text, targetWidthDots, maxAvailableDots, minWidthDots) {
     const chars = Math.max(1, String(text || '').length);
     const estimatedTotal = chars * targetWidthDots * 0.56;
@@ -221,10 +213,6 @@
     return Math.max(minWidthDots, fitted);
   }
 
-  /**
-   * Calcula métricas fieles a imprimir.ps1 en 57 x 19 mm (456 x 152 dots a 203 dpi)
-   * diferenciando Aromas (logo 172/456) de Intenciones y Pack x2 (logo 138/456).
-   */
   function computeLayoutMetrics(data, cal) {
     const dpi = Number(cal.dpi) === 300 ? 300 : 203;
     const dotsPerMm = dpi / 25.4;
@@ -235,13 +223,15 @@
     const pw = Math.max(200, Math.round(widthMm * dotsPerMm));
     const ll = Math.max(80, Math.round(heightMm * dotsPerMm));
 
-    const category = data.category === 'intenciones' || data.category === 'packx2' ? data.category : 'aromas';
+    const template = data.template || 'lot';
+    const category = data.category || 'aromas';
     const hasSubtitle = category === 'packx2' || Boolean(String(data.subtitle || '').trim());
-    const compactLogo = category !== 'aromas' || Boolean(data.compactLogo || hasSubtitle);
-    const uniformBold = category !== 'aromas' || Boolean(data.uniformBold);
+    const compactLogo = template !== 'lot' || category !== 'aromas' || Boolean(data.compactLogo || hasSubtitle);
+    const uniformBold = template === 'lot' && (category !== 'aromas' || Boolean(data.uniformBold));
 
-    // Proporciones exactas de imprimir.ps1: 172/456 (Aromas) vs 138/456 (Intenciones y Pack x2)
-    const logoWidthRatio = compactLogo ? (138 / 456) : (172 / 456);
+    const logoWidthRatio = template === 'lot'
+      ? (compactLogo ? (138 / 456) : (172 / 456))
+      : (146 / 456);
     const logoMaxH = Math.round(ll * 0.84);
     const logoAspect = logoCropBounds && logoCropBounds.h > 0
       ? (logoCropBounds.w / logoCropBounds.h)
@@ -264,6 +254,7 @@
       heightMm: heightMm,
       pw: pw,
       ll: ll,
+      template: template,
       category: category,
       hasSubtitle: hasSubtitle,
       compactLogo: compactLogo,
@@ -274,9 +265,62 @@
     };
   }
 
-  /**
-   * Genera el código ZPL II completo adaptado a la plantilla de la categoría activa.
-   */
+  function buildZplHeader(pw, ll, cal) {
+    const darkness = Math.max(5, Math.min(30, Math.round(Number(cal.darkness) || 25)));
+    const speed = Math.max(2, Math.min(6, Math.round(Number(cal.speed) || 3)));
+    return [
+      '~SD' + darkness,
+      '^XA',
+      '^CI28',
+      '^PW' + pw,
+      '^LL' + ll,
+      '^MNY',
+      '^PR' + speed,
+      '^LH0,0'
+    ];
+  }
+
+  function buildBarcodeCellZpl(lines, data, cal, cellX, cellY, cellW, cellH, scale, isCompactCell) {
+    const safeName = sanitizeZplField(data.labelTitle || data.name || 'BIPA');
+    const cleanEan = String(data.ean13 || '').replace(/\D/g, '').slice(0, 13) || '7596246002876';
+    const safeCpe = sanitizeZplField(data.cpe || '');
+
+    const padX = Math.round((isCompactCell ? 6 : 16) * scale);
+    const padY = Math.round((isCompactCell ? 3 : 8) * scale);
+    const innerW = Math.max(Math.round(80 * scale), cellW - padX * 2);
+
+    const nameH = Math.round((isCompactCell ? 13 : 22) * scale);
+    const nameW = fitFontWidth(safeName, (isCompactCell ? 11 : 17) * scale, innerW, Math.round(7 * scale));
+
+    const cpeText = safeCpe ? ('CPE ' + safeCpe) : '';
+    const cpeH = Math.round((isCompactCell ? 12 : 19) * scale);
+    const cpeW = fitFontWidth(cpeText, (isCompactCell ? 10 : 15) * scale, innerW, Math.round(7 * scale));
+
+    // EAN-13 tiene 95 módulos + dígitos; módulo 2 dots en estándar (190 dots) o 1 dot en celdas pequeñas
+    const moduleW = isCompactCell || cellW < Math.round(230 * scale)
+      ? Math.max(1, Math.round(1 * scale))
+      : Math.max(2, Math.round(2 * scale));
+    const barcodeVisualW = moduleW * 105;
+    const barX = cellX + Math.max(padX, Math.round((cellW - barcodeVisualW) / 2));
+
+    const nameY = cellY + padY;
+    const cpeY = cellY + cellH - padY - cpeH;
+    const barY = nameY + nameH + Math.round((isCompactCell ? 3 : 6) * scale);
+    const barH = Math.max(
+      Math.round((isCompactCell ? 24 : 44) * scale),
+      cpeY - barY - Math.round((isCompactCell ? 10 : 18) * scale)
+    );
+
+    const nameX = cellX + Math.max(padX, Math.round((cellW - Math.min(innerW, safeName.length * nameW * 0.56)) / 2));
+    lines.push('^FO' + nameX + ',' + nameY + '^A0N,' + nameH + ',' + nameW + '^FD' + safeName + '^FS');
+    lines.push('^FO' + barX + ',' + barY + '^BY' + moduleW + ',3,' + barH + '^BEN,' + barH + ',Y,N^FD' + cleanEan + '^FS');
+
+    if (cpeText) {
+      const cpeX = cellX + Math.max(padX, Math.round((cellW - Math.min(innerW, cpeText.length * cpeW * 0.56)) / 2));
+      lines.push('^FO' + cpeX + ',' + cpeY + '^A0N,' + cpeH + ',' + cpeW + '^FD' + cpeText + '^FS');
+    }
+  }
+
   function generateLotZpl(data, cal) {
     const m = computeLayoutMetrics(data, cal);
     const scale = m.scale;
@@ -284,17 +328,54 @@
     const ll = m.ll;
     const offX = Math.round(Number(cal.offsetX) || 0);
     const offY = Math.round(Number(cal.offsetY) || 0);
-    const darkness = Math.max(5, Math.min(30, Math.round(Number(cal.darkness) || 25)));
-    const speed = Math.max(2, Math.min(6, Math.round(Number(cal.speed) || 3)));
     const copies = Math.max(1, Math.min(999, Math.round(Number(data.quantity) || 1)));
+    const safeTitle = sanitizeZplField(data.labelTitle || data.name || 'Producto BIPA');
 
-    // 1. Logo monocromático BIPA a la izquierda (^GFA) en posición fiel (x=2, divisoria x=178 o x=144)
+    const zpl = buildZplHeader(pw, ll, cal);
+
+    // ---- PLANTILLA CÓDIGO DE BARRAS (EAN-13 + CPE) ----
+    if (m.template === 'barcode') {
+      const fmtId = data.barcodeFormat || 'gs1';
+      if (fmtId === 'x4') {
+        const halfW = Math.floor(pw / 2);
+        const halfH = Math.floor(ll / 2);
+        for (let r = 0; r < 2; r++) {
+          for (let c = 0; c < 2; c++) {
+            buildBarcodeCellZpl(
+              zpl,
+              data,
+              cal,
+              Math.max(0, c * halfW + offX),
+              Math.max(0, r * halfH + offY),
+              halfW,
+              halfH,
+              scale,
+              true
+            );
+          }
+        }
+      } else {
+        const fmt = global.BipaCatalog && global.BipaCatalog.getBarcodeFormat
+          ? global.BipaCatalog.getBarcodeFormat(fmtId)
+          : { widthMm: 0, heightMm: 0 };
+        const areaW = fmt.widthMm > 0 ? Math.min(pw, Math.round(fmt.widthMm * m.dotsPerMm)) : pw;
+        const areaH = fmt.heightMm > 0 ? Math.min(ll, Math.round(fmt.heightMm * m.dotsPerMm)) : ll;
+        const startX = Math.max(0, Math.round((pw - areaW) / 2) + offX);
+        const startY = Math.max(0, Math.round((ll - areaH) / 2) + offY);
+        buildBarcodeCellZpl(zpl, data, cal, startX, startY, areaW, areaH, scale, areaH < Math.round(105 * scale));
+      }
+
+      zpl.push('^PQ' + copies + ',0,1,Y');
+      zpl.push('^XZ');
+      return { zpl: zpl.join('\n') + '\n', count: copies, title: safeTitle, metrics: m };
+    }
+
+    // ---- BLOQUE IZQUIERDO COMPARTIDO: LOGO ^GFA + LÍNEA DIVISORIA ^GB ----
     const marginLeft = Math.round(2 * scale);
     const logoX = Math.max(0, marginLeft + offX);
     const logoY = Math.max(0, Math.round((ll - m.logoH) / 2) + offY);
     const logoGfa = buildLogoGfa(m.logoW, m.logoH);
 
-    // 2. Línea divisoria vertical (^GB)
     const dividerGap = Math.round(4 * scale);
     const dividerThick = Math.max(2, Math.round(2 * scale));
     const dividerPadY = Math.round(6 * scale);
@@ -302,15 +383,68 @@
     const dividerY = Math.max(0, dividerPadY + offY);
     const dividerH = Math.max(20, ll - dividerPadY * 2);
 
-    // 3. Bloque derecho de textos
-    const colT = Math.max(0, dividerX + dividerThick + Math.round(4 * scale));
+    const colT = Math.max(0, dividerX + dividerThick + Math.round(6 * scale));
     const marginRight = Math.round(4 * scale);
     const fullRightWidth = Math.max(
       Math.round(100 * scale),
       pw - (colT - offX) - marginRight
     );
 
-    const safeTitle = sanitizeZplField(data.labelTitle || data.name || 'Producto BIPA');
+    if (logoGfa) {
+      zpl.push('^FO' + logoX + ',' + logoY + logoGfa.command + '^FS');
+    }
+    zpl.push('^FO' + dividerX + ',' + dividerY + '^GB' + dividerThick + ',' + dividerH + ',' + dividerThick + '^FS');
+
+    // ---- PLANTILLA SIMPLE (Solo Aroma, Aroma 240 g, Muestras MM, Mechas) ----
+    if (m.template === 'simple') {
+      const safeWeight = sanitizeZplField(data.weightText || '');
+      const titleH = Math.round((safeWeight ? 30 : 34) * scale);
+      const titleW = fitFontWidth(safeTitle, (safeWeight ? 22 : 25) * scale, fullRightWidth, Math.round(10 * scale));
+      if (safeWeight) {
+        const wH = Math.round(24 * scale);
+        const wW = fitFontWidth(safeWeight, 19 * scale, fullRightWidth, Math.round(10 * scale));
+        const totalH = titleH + Math.round(12 * scale) + wH;
+        const y0 = Math.max(Math.round(8 * scale), Math.round((ll - totalH) / 2) + offY);
+        zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
+        zpl.push('^FO' + colT + ',' + (y0 + titleH + Math.round(12 * scale)) + '^A0N,' + wH + ',' + wW + '^FD' + safeWeight + '^FS');
+      } else {
+        const y0 = Math.max(Math.round(8 * scale), Math.round((ll - titleH) / 2) + offY);
+        zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
+      }
+
+      zpl.push('^PQ' + copies + ',0,1,Y');
+      zpl.push('^XZ');
+      return { zpl: zpl.join('\n') + '\n', count: copies, title: safeTitle, metrics: m };
+    }
+
+    // ---- PLANTILLA ENVÍO ----
+    if (m.template === 'shipping') {
+      const dest = sanitizeZplField(data.destination || 'Central Madeirense');
+      const sender = sanitizeZplField(data.sender || 'Karla Montilla');
+      const phone = sanitizeZplField(data.phone || '0424-7718497');
+      const line1 = 'Envío a ' + dest;
+      const line2 = 'Remite: ' + sender;
+      const line3 = 'Tel: ' + phone;
+
+      const h1 = Math.round(26 * scale);
+      const w1 = fitFontWidth(line1, 19 * scale, fullRightWidth, Math.round(9 * scale));
+      const h2 = Math.round(21 * scale);
+      const w2 = fitFontWidth(line2, 16 * scale, fullRightWidth, Math.round(9 * scale));
+      const h3 = Math.round(21 * scale);
+      const w3 = fitFontWidth(line3, 16 * scale, fullRightWidth, Math.round(9 * scale));
+
+      const step = Math.round(36 * scale);
+      const y0 = Math.max(Math.round(8 * scale), Math.round((ll - step * 3) / 2) + offY);
+
+      zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + h1 + ',' + w1 + '^FD' + line1 + '^FS');
+      zpl.push('^FO' + colT + ',' + (y0 + step) + '^A0N,' + h2 + ',' + w2 + '^FD' + line2 + '^FS');
+      zpl.push('^FO' + colT + ',' + (y0 + step * 2) + '^A0N,' + h3 + ',' + w3 + '^FD' + line3 + '^FS');
+      zpl.push('^PQ' + copies + ',0,1,Y');
+      zpl.push('^XZ');
+      return { zpl: zpl.join('\n') + '\n', count: copies, title: line1, metrics: m };
+    }
+
+    // ---- PLANTILLA LOTE (Aromas, Intenciones, Pack x2) ----
     const safeSubtitle = m.category === 'packx2' || data.subtitle
       ? sanitizeZplField(data.subtitle || '')
       : '';
@@ -339,7 +473,6 @@
     const blockH = rowStep * nRows;
     const baseY = Math.max(Math.round(4 * scale), Math.round((ll - blockH) / 2));
 
-    // Tipografía diferenciada por plantilla (Aromas, Intenciones, Pack x2)
     let titleTargetH = 24;
     let titleTargetW = 18;
     let fieldTargetH = 19.5;
@@ -366,30 +499,12 @@
     const fieldH = Math.round(fieldTargetH * scale * heightRatio);
     const labelCharW = Math.round(labelCharTargetW * scale * heightRatio);
 
-    // Columna de valores alineada tras "Vencimiento:"
     const labelColW = Math.min(
       Math.round(fullRightWidth * 0.43),
       Math.round(12 * labelCharW * 0.56) + Math.round(6 * scale)
     );
     const colV = colT + labelColW;
     const maxValWidth = Math.max(Math.round(60 * scale), fullRightWidth - labelColW);
-
-    const zpl = [
-      '~SD' + darkness,
-      '^XA',
-      '^CI28',
-      '^PW' + pw,
-      '^LL' + ll,
-      '^MNY',
-      '^PR' + speed,
-      '^LH0,0'
-    ];
-
-    if (logoGfa) {
-      zpl.push('^FO' + logoX + ',' + logoY + logoGfa.command + '^FS');
-    }
-
-    zpl.push('^FO' + dividerX + ',' + dividerY + '^GB' + dividerThick + ',' + dividerH + ',' + dividerThick + '^FS');
 
     for (let i = 0; i < nRows; i++) {
       const row = rows[i];

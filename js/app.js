@@ -1,7 +1,6 @@
 /**
- * BIPA Etiquetas de Lote · Controlador principal de la aplicación
- * Maneja las 3 pestañas exclusivas (Aromas, Intenciones, Pack x2), formulario dinámico
- * por categoría, vista previa blanca en proporción real, modal ampliado, WebUSB y RawBT.
+ * BIPA Etiquetas · Controlador principal con perfiles (Encargado / Administrador),
+ * catálogo filtrado por rol, vista previa multi-plantilla, WebUSB y RawBT.
  */
 (function () {
   'use strict';
@@ -9,13 +8,31 @@
   const CATEGORY_NAMES = {
     aromas: 'Aromas',
     intenciones: 'Intenciones',
-    packx2: 'Pack x2'
+    packx2: 'Pack x2',
+    solo_aroma: 'Solo Aroma',
+    solo_aroma_240: 'Aroma 240 g',
+    muestras: 'Muestras MM',
+    mechas: 'Mechas',
+    envios: 'Envíos',
+    barras: 'Cód. Barras'
   };
 
   const els = {
+    roleScreen: document.getElementById('roleScreen'),
+    btnSelectOperator: document.getElementById('btnSelectOperator'),
+    btnSelectAdmin: document.getElementById('btnSelectAdmin'),
+    adminPinBox: document.getElementById('adminPinBox'),
+    inputAdminPin: document.getElementById('inputAdminPin'),
+    btnTogglePinVisibility: document.getElementById('btnTogglePinVisibility'),
+    adminPinError: document.getElementById('adminPinError'),
+    btnSubmitAdminPin: document.getElementById('btnSubmitAdminPin'),
+
+    appShell: document.getElementById('appShell'),
     printerStatusBadge: document.getElementById('printerStatusBadge'),
     printerStatusText: document.getElementById('printerStatusText'),
     printerDeviceInfo: document.getElementById('printerDeviceInfo'),
+    adminModeBadge: document.getElementById('adminModeBadge'),
+    btnSwitchProfile: document.getElementById('btnSwitchProfile'),
     btnConnectUsb: document.getElementById('btnConnectUsb'),
     btnConnectLabel: document.getElementById('btnConnectLabel'),
     btnConnectAny: document.getElementById('btnConnectAny'),
@@ -26,11 +43,19 @@
     btnCloseAlert: document.getElementById('btnCloseAlert'),
 
     previewMetaChip: document.getElementById('previewMetaChip'),
+    previewTapHint: document.getElementById('previewTapHint'),
     btnOpenZoom: document.getElementById('btnOpenZoom'),
     thermalLabel: document.getElementById('thermalLabel'),
+    previewStandardLayout: document.getElementById('previewStandardLayout'),
+    previewBarcodeLayout: document.getElementById('previewBarcodeLayout'),
     previewLogoBtn: document.getElementById('previewLogoBtn'),
     previewTitle: document.getElementById('previewTitle'),
     previewSubtitle: document.getElementById('previewSubtitle'),
+    previewSimpleWeight: document.getElementById('previewSimpleWeight'),
+    previewShippingLines: document.getElementById('previewShippingLines'),
+    previewShipLine2: document.getElementById('previewShipLine2'),
+    previewShipLine3: document.getElementById('previewShipLine3'),
+    previewLotGrid: document.getElementById('previewLotGrid'),
     previewRowNet: document.getElementById('previewRowNet'),
     previewNetContent: document.getElementById('previewNetContent'),
     previewRowLot: document.getElementById('previewRowLot'),
@@ -48,8 +73,15 @@
     zoomStage: document.getElementById('zoomStage'),
     zoomLabelFrame: document.getElementById('zoomLabelFrame'),
     zoomThermalLabel: document.getElementById('zoomThermalLabel'),
+    zoomStandardLayout: document.getElementById('zoomStandardLayout'),
+    zoomBarcodeLayout: document.getElementById('zoomBarcodeLayout'),
     zoomTitle: document.getElementById('zoomTitle'),
     zoomSubtitle: document.getElementById('zoomSubtitle'),
+    zoomSimpleWeight: document.getElementById('zoomSimpleWeight'),
+    zoomShippingLines: document.getElementById('zoomShippingLines'),
+    zoomShipLine2: document.getElementById('zoomShipLine2'),
+    zoomShipLine3: document.getElementById('zoomShipLine3'),
+    zoomLotGrid: document.getElementById('zoomLotGrid'),
     zoomNetContent: document.getElementById('zoomNetContent'),
     zoomLot: document.getElementById('zoomLot'),
     zoomElaboration: document.getElementById('zoomElaboration'),
@@ -58,11 +90,13 @@
     catalogSection: document.getElementById('catalogSection'),
     catalogCount: document.getElementById('catalogCount'),
     catalogTabs: document.getElementById('catalogTabs'),
+    adminCategoryTabs: document.getElementById('adminCategoryTabs'),
     inputProductSearch: document.getElementById('inputProductSearch'),
     btnClearSearch: document.getElementById('btnClearSearch'),
     productList: document.getElementById('productList'),
     catalogCrossHint: document.getElementById('catalogCrossHint'),
 
+    adminEditSection: document.getElementById('adminEditSection'),
     activeTemplateBadge: document.getElementById('activeTemplateBadge'),
     groupAromaField: document.getElementById('groupAromaField'),
     inputLabelTitle: document.getElementById('inputLabelTitle'),
@@ -73,12 +107,26 @@
     selectPackAroma1: document.getElementById('selectPackAroma1'),
     selectPackAroma2: document.getElementById('selectPackAroma2'),
     inputSubtitle: document.getElementById('inputSubtitle'),
-
+    groupLotCommonFields: document.getElementById('groupLotCommonFields'),
     inputNetContent: document.getElementById('inputNetContent'),
     inputLot: document.getElementById('inputLot'),
     inputElaboration: document.getElementById('inputElaboration'),
     inputExpiry: document.getElementById('inputExpiry'),
     btnResetLotDefaults: document.getElementById('btnResetLotDefaults'),
+
+    groupSimpleFields: document.getElementById('groupSimpleFields'),
+    inputSimpleTitle: document.getElementById('inputSimpleTitle'),
+    inputSimpleWeight: document.getElementById('inputSimpleWeight'),
+    groupShippingFields: document.getElementById('groupShippingFields'),
+    inputShipDest: document.getElementById('inputShipDest'),
+    inputShipSender: document.getElementById('inputShipSender'),
+    inputShipPhone: document.getElementById('inputShipPhone'),
+    groupBarcodeFields: document.getElementById('groupBarcodeFields'),
+    inputBarcodeTitle: document.getElementById('inputBarcodeTitle'),
+    selectBarcodeFormat: document.getElementById('selectBarcodeFormat'),
+    inputBarcodeEan: document.getElementById('inputBarcodeEan'),
+    inputBarcodeCpe: document.getElementById('inputBarcodeCpe'),
+
     inputQuantity: document.getElementById('inputQuantity'),
     btnQtyMinus: document.getElementById('btnQtyMinus'),
     btnQtyPlus: document.getElementById('btnQtyPlus'),
@@ -88,6 +136,7 @@
     btnPrintUsbSub: document.getElementById('btnPrintUsbSub'),
     btnPrintRawbt: document.getElementById('btnPrintRawbt'),
 
+    calibrationPanel: document.getElementById('calibrationPanel'),
     btnDpi203: document.getElementById('btnDpi203'),
     btnDpi300: document.getElementById('btnDpi300'),
     inputWidthMm: document.getElementById('inputWidthMm'),
@@ -108,19 +157,28 @@
     toast: document.getElementById('toast')
   };
 
+  let currentRole = BipaAuth.loadRole(); // 'operator' | 'admin' | null
   let calibration = BipaStorage.loadCalibration();
   const savedLot = BipaStorage.loadLotState();
-  const initialProduct = BipaCatalog.getById(savedLot.productId);
+  const initialProduct = BipaCatalog.getById(savedLot.productId, currentRole === 'admin');
 
   let formState = {
     productId: initialProduct.id,
     category: initialProduct.category,
+    template: initialProduct.template || 'lot',
     labelTitle: initialProduct.labelTitle,
     intentionName: initialProduct.intentionName || '',
     subtitle: initialProduct.subtitle || '',
     comboAroma1: initialProduct.comboAromas ? initialProduct.comboAromas[0] : BipaCatalog.AROMAS_130G[0],
     comboAroma2: initialProduct.comboAromas ? initialProduct.comboAromas[1] : BipaCatalog.AROMAS_130G[5],
-    netContent: initialProduct.netContent,
+    netContent: initialProduct.netContent || '',
+    weightText: initialProduct.weightText || '',
+    destination: initialProduct.destination || 'Central Madeirense',
+    sender: initialProduct.sender || 'Karla Montilla',
+    phone: initialProduct.phone || '0424-7718497',
+    ean13: initialProduct.ean13 || '7596246002876',
+    cpe: initialProduct.cpe || '1026622516',
+    barcodeFormat: initialProduct.barcodeFormat || 'gs1',
     compactLogo: initialProduct.compactLogo,
     uniformBold: initialProduct.uniformBold,
     lot: savedLot.lot,
@@ -129,11 +187,11 @@
     quantity: 1
   };
 
-  const lastSelectedByCategory = {
-    aromas: BipaCatalog.getFirstByCategory('aromas').id,
-    intenciones: BipaCatalog.getFirstByCategory('intenciones').id,
-    packx2: BipaCatalog.getFirstByCategory('packx2').id
-  };
+  const lastSelectedByCategory = {};
+  BipaCatalog.CATEGORIES.forEach(function (c) {
+    const first = BipaCatalog.getFirstByCategory(c.id, true);
+    if (first) lastSelectedByCategory[c.id] = first.id;
+  });
   lastSelectedByCategory[initialProduct.category] = initialProduct.id;
 
   let activeCategory = initialProduct.category;
@@ -141,6 +199,66 @@
   let toastTimer = null;
   let isPrinting = false;
   let isZoomRotated = false;
+
+  function isAdmin() {
+    return currentRole === 'admin';
+  }
+
+  /* ------------------------------------------------------------------------
+     Pantalla de perfiles y transición Encargado / Admin
+     ------------------------------------------------------------------------ */
+  function showRoleScreen(expandAdminPin) {
+    els.roleScreen.hidden = false;
+    els.appShell.hidden = true;
+    document.body.classList.remove('role-operator', 'role-admin');
+    els.adminPinError.hidden = true;
+    els.inputAdminPin.value = '';
+    els.adminPinBox.hidden = !expandAdminPin;
+    els.btnSelectAdmin.setAttribute('aria-expanded', String(Boolean(expandAdminPin)));
+    if (expandAdminPin) {
+      setTimeout(function () { els.inputAdminPin.focus(); }, 60);
+    }
+  }
+
+  function applyRoleUI(role) {
+    currentRole = role;
+    const admin = role === 'admin';
+
+    els.roleScreen.hidden = true;
+    els.appShell.hidden = false;
+    document.body.classList.toggle('role-admin', admin);
+    document.body.classList.toggle('role-operator', !admin);
+
+    els.adminModeBadge.hidden = !admin;
+    els.btnSwitchProfile.textContent = admin ? 'Salir' : 'Modo Admin';
+    els.adminCategoryTabs.hidden = !admin;
+    els.adminEditSection.hidden = !admin;
+    els.btnPrintRawbt.hidden = !admin;
+    els.calibrationPanel.hidden = !admin;
+
+    // Si es Encargado y tenía seleccionada una categoría exclusiva de Admin, volver a Aromas
+    const prod = BipaCatalog.getById(formState.productId, admin);
+    if (!admin && prod.id !== formState.productId) {
+      selectProduct(prod.id, false);
+    } else if (!admin && activeCategory !== 'aromas' && activeCategory !== 'intenciones' && activeCategory !== 'packx2') {
+      selectProduct(BipaCatalog.getFirstByCategory('aromas', false).id, false);
+    } else {
+      renderCategoryTabs();
+      renderCatalogList();
+      applyFormStateToInputs();
+      renderLivePreview();
+    }
+
+    // Desactivar tabindex en la vista previa cuando es solo lectura (Encargado)
+    const previewControls = els.thermalLabel.querySelectorAll('button');
+    previewControls.forEach(function (btn) {
+      if (admin) {
+        btn.removeAttribute('tabindex');
+      } else {
+        btn.setAttribute('tabindex', '-1');
+      }
+    });
+  }
 
   /* ------------------------------------------------------------------------
      Avisos, Toast y enfoque interactivo
@@ -174,6 +292,7 @@
   }
 
   function focusAndScrollTo(inputEl, containerEl, selectAll) {
+    if (!isAdmin()) return;
     const scrollTarget = containerEl || inputEl;
     if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
       scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -246,14 +365,17 @@
   }
 
   /* ------------------------------------------------------------------------
-     Catálogo: 3 pestañas, selector rápido y formulario dinámico
+     Catálogo y selector
      ------------------------------------------------------------------------ */
-  function populatePackAromaSelects() {
-    const optionsHtml = BipaCatalog.AROMAS_130G.map(function (name) {
+  function populateSelectOptions() {
+    els.selectPackAroma1.innerHTML = BipaCatalog.AROMAS_130G.map(function (name) {
       return '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>';
     }).join('');
-    els.selectPackAroma1.innerHTML = optionsHtml;
-    els.selectPackAroma2.innerHTML = optionsHtml;
+    els.selectPackAroma2.innerHTML = els.selectPackAroma1.innerHTML;
+
+    els.selectBarcodeFormat.innerHTML = BipaCatalog.BARCODE_FORMATS.map(function (fmt) {
+      return '<option value="' + escapeHtml(fmt.id) + '">' + escapeHtml(fmt.label) + '</option>';
+    }).join('');
   }
 
   function renderCategoryTabs() {
@@ -262,42 +384,56 @@
       tab.classList.toggle('is-active', active);
       tab.setAttribute('aria-selected', String(active));
     });
+    els.adminCategoryTabs.querySelectorAll('.cat-chip').forEach(function (chip) {
+      const active = chip.dataset.category === activeCategory;
+      chip.classList.toggle('is-active', active);
+      chip.setAttribute('aria-selected', String(active));
+    });
   }
 
   function switchCategory(nextCategory) {
-    if (!CATEGORY_NAMES[nextCategory]) return;
+    const allowedCats = BipaCatalog.getCategoriesForRole(isAdmin()).map(function (c) { return c.id; });
+    if (allowedCats.indexOf(nextCategory) === -1) return;
+
     activeCategory = nextCategory;
     renderCategoryTabs();
 
-    // Si hay texto de búsqueda que no tiene resultados en la nueva pestaña, igual filtramos
-    const filtered = BipaCatalog.filterProducts(searchQuery, activeCategory);
+    const filtered = BipaCatalog.filterProducts(searchQuery, activeCategory, isAdmin());
     if (filtered.length > 0 && formState.category !== activeCategory) {
       const rememberedId = lastSelectedByCategory[activeCategory];
       const target = filtered.find(function (p) { return p.id === rememberedId; }) || filtered[0];
       selectProduct(target.id, false);
     } else if (formState.category !== activeCategory) {
-      const targetId = lastSelectedByCategory[activeCategory] || BipaCatalog.getFirstByCategory(activeCategory).id;
-      selectProduct(targetId, false);
+      const target = BipaCatalog.getFirstByCategory(activeCategory, isAdmin());
+      selectProduct(target.id, false);
     } else {
       renderCatalogList();
     }
   }
 
   function selectProduct(productId, notifyUser) {
-    const prod = BipaCatalog.getById(productId);
+    const prod = BipaCatalog.getById(productId, isAdmin());
     activeCategory = prod.category;
     lastSelectedByCategory[prod.category] = prod.id;
 
     formState.productId = prod.id;
     formState.category = prod.category;
-    formState.labelTitle = prod.labelTitle;
+    formState.template = prod.template || 'lot';
+    formState.labelTitle = prod.labelTitle || prod.name;
     formState.intentionName = prod.intentionName || '';
     formState.subtitle = prod.subtitle || '';
     formState.comboAroma1 = prod.comboAromas ? prod.comboAromas[0] : BipaCatalog.AROMAS_130G[0];
     formState.comboAroma2 = prod.comboAromas ? prod.comboAromas[1] : BipaCatalog.AROMAS_130G[5];
-    formState.netContent = prod.netContent;
-    formState.compactLogo = prod.compactLogo;
-    formState.uniformBold = prod.uniformBold;
+    formState.netContent = prod.netContent || '';
+    formState.weightText = prod.weightText || '';
+    formState.destination = prod.destination || formState.destination;
+    formState.sender = prod.sender || formState.sender;
+    formState.phone = prod.phone || formState.phone;
+    formState.ean13 = prod.ean13 || formState.ean13;
+    formState.cpe = prod.cpe || formState.cpe;
+    formState.barcodeFormat = prod.barcodeFormat || 'gs1';
+    formState.compactLogo = Boolean(prod.compactLogo);
+    formState.uniformBold = Boolean(prod.uniformBold);
 
     renderCategoryTabs();
     applyFormStateToInputs();
@@ -311,8 +447,10 @@
   }
 
   function renderCatalogList() {
-    const catMeta = BipaCatalog.CATEGORIES.find(function (c) { return c.id === activeCategory; }) || BipaCatalog.CATEGORIES[0];
-    const filtered = BipaCatalog.filterProducts(searchQuery, activeCategory);
+    const allowedCats = BipaCatalog.getCategoriesForRole(isAdmin());
+    const catMeta = allowedCats.find(function (c) { return c.id === activeCategory; }) || allowedCats[0];
+    const filtered = BipaCatalog.filterProducts(searchQuery, activeCategory, isAdmin());
+
     els.catalogCount.textContent = filtered.length + ' de ' + catMeta.count;
     els.btnClearSearch.hidden = searchQuery.length === 0;
 
@@ -324,7 +462,7 @@
         escapeHtml(searchQuery) +
         '».</div>';
 
-      const cross = BipaCatalog.searchAllCategories(searchQuery).filter(function (c) {
+      const cross = BipaCatalog.searchAllCategories(searchQuery, isAdmin()).filter(function (c) {
         return c.id !== activeCategory;
       });
       if (cross.length > 0) {
@@ -362,7 +500,11 @@
       } else if (prod.moment) {
         metaParts.push('<span class="product-tag">' + escapeHtml(prod.moment) + '</span>');
       }
-      metaParts.push('<span>' + escapeHtml(prod.netContent) + '</span>');
+
+      if (prod.netContent) metaParts.push('<span>' + escapeHtml(prod.netContent) + '</span>');
+      if (prod.weightText) metaParts.push('<span>' + escapeHtml(prod.weightText) + '</span>');
+      if (prod.ean13) metaParts.push('<span class="font-mono">' + escapeHtml(prod.ean13) + '</span>');
+      if (prod.destination) metaParts.push('<span>' + escapeHtml(prod.sender) + '</span>');
 
       return (
         '<button type="button" class="product-item' +
@@ -399,14 +541,22 @@
   }
 
   /* ------------------------------------------------------------------------
-     Formulario dinámico según categoría (Aromas / Intenciones / Pack x2)
+     Formulario dinámico según categoría / plantilla (Admin)
      ------------------------------------------------------------------------ */
   function syncDynamicFormVisibility() {
     const cat = formState.category;
+    const tpl = formState.template;
     els.activeTemplateBadge.textContent = 'Plantilla: ' + (CATEGORY_NAMES[cat] || 'Aromas');
-    els.groupAromaField.hidden = cat !== 'aromas';
-    els.groupIntentionField.hidden = cat !== 'intenciones';
-    els.groupPackFields.hidden = cat !== 'packx2';
+
+    els.groupAromaField.hidden = !(tpl === 'lot' && cat === 'aromas');
+    els.groupIntentionField.hidden = !(tpl === 'lot' && cat === 'intenciones');
+    els.groupPackFields.hidden = !(tpl === 'lot' && cat === 'packx2');
+    els.groupLotCommonFields.hidden = tpl !== 'lot';
+    els.btnResetLotDefaults.hidden = tpl !== 'lot';
+
+    els.groupSimpleFields.hidden = tpl !== 'simple';
+    els.groupShippingFields.hidden = tpl !== 'shipping';
+    els.groupBarcodeFields.hidden = tpl !== 'barcode';
   }
 
   function applyFormStateToInputs() {
@@ -423,6 +573,19 @@
     els.inputLot.value = formState.lot;
     els.inputElaboration.value = formState.elaboration;
     els.inputExpiry.value = formState.expiry;
+
+    els.inputSimpleTitle.value = formState.labelTitle;
+    els.inputSimpleWeight.value = formState.weightText;
+
+    els.inputShipDest.value = formState.destination;
+    els.inputShipSender.value = formState.sender;
+    els.inputShipPhone.value = formState.phone;
+
+    els.inputBarcodeTitle.value = formState.labelTitle;
+    els.selectBarcodeFormat.value = formState.barcodeFormat;
+    els.inputBarcodeEan.value = formState.ean13;
+    els.inputBarcodeCpe.value = formState.cpe;
+
     els.inputQuantity.value = String(formState.quantity);
   }
 
@@ -448,23 +611,40 @@
 
   function readFormStateFromInputs() {
     const qtyRaw = parseInt(els.inputQuantity.value, 10);
-    if (formState.category === 'aromas') {
-      formState.labelTitle = els.inputLabelTitle.value;
-      formState.subtitle = '';
-    } else if (formState.category === 'intenciones') {
-      formState.intentionName = els.inputIntentionName.value;
-      const cleanInt = formState.intentionName.trim();
-      formState.labelTitle = cleanInt ? 'Vela Aromática ' + cleanInt : 'Vela Aromática';
-      formState.subtitle = '';
-    } else if (formState.category === 'packx2') {
-      formState.labelTitle = els.inputPackTitle.value;
-      formState.subtitle = els.inputSubtitle.value;
+    const tpl = formState.template;
+
+    if (tpl === 'lot') {
+      if (formState.category === 'aromas') {
+        formState.labelTitle = els.inputLabelTitle.value;
+        formState.subtitle = '';
+      } else if (formState.category === 'intenciones') {
+        formState.intentionName = els.inputIntentionName.value;
+        const cleanInt = formState.intentionName.trim();
+        formState.labelTitle = cleanInt ? 'Vela Aromática ' + cleanInt : 'Vela Aromática';
+        formState.subtitle = '';
+      } else if (formState.category === 'packx2') {
+        formState.labelTitle = els.inputPackTitle.value;
+        formState.subtitle = els.inputSubtitle.value;
+      }
+      formState.netContent = els.inputNetContent.value;
+      formState.lot = els.inputLot.value;
+      formState.elaboration = els.inputElaboration.value;
+      formState.expiry = els.inputExpiry.value;
+    } else if (tpl === 'simple') {
+      formState.labelTitle = els.inputSimpleTitle.value;
+      formState.weightText = els.inputSimpleWeight.value;
+    } else if (tpl === 'shipping') {
+      formState.destination = els.inputShipDest.value;
+      formState.sender = els.inputShipSender.value;
+      formState.phone = els.inputShipPhone.value;
+      formState.labelTitle = 'Envío a ' + formState.destination;
+    } else if (tpl === 'barcode') {
+      formState.labelTitle = els.inputBarcodeTitle.value;
+      formState.barcodeFormat = els.selectBarcodeFormat.value;
+      formState.ean13 = els.inputBarcodeEan.value;
+      formState.cpe = els.inputBarcodeCpe.value;
     }
 
-    formState.netContent = els.inputNetContent.value;
-    formState.lot = els.inputLot.value;
-    formState.elaboration = els.inputElaboration.value;
-    formState.expiry = els.inputExpiry.value;
     formState.quantity = Number.isFinite(qtyRaw) ? Math.max(1, Math.min(999, qtyRaw)) : 1;
   }
 
@@ -492,50 +672,117 @@
   }
 
   /* ------------------------------------------------------------------------
-     Render en vivo: Vista previa principal, Modal ampliado y ZPL
+     Render en vivo de los 4 templates visuales
      ------------------------------------------------------------------------ */
-  function applyLabelSurfaceGeometry(labelEl, metrics, hasSubtitle) {
+  function buildBarcodePreviewHtml() {
+    const isX4 = formState.barcodeFormat === 'x4';
+    const title = escapeHtml(formState.labelTitle.trim() || 'BIPA');
+    const digits = escapeHtml(formState.ean13.trim() || '7596246002876');
+    const cpe = escapeHtml(formState.cpe.trim());
+    const cell =
+      '<div class="barcode-cell">' +
+      '<div class="barcode-title">' + title + '</div>' +
+      '<div class="barcode-bars" aria-hidden="true"></div>' +
+      '<div class="barcode-digits">' + digits + '</div>' +
+      (cpe ? '<div class="barcode-cpe">CPE ' + cpe + '</div>' : '') +
+      '</div>';
+    return isX4 ? (cell + cell + cell + cell) : cell;
+  }
+
+  function syncPreviewSurface(opts) {
+    const labelEl = opts.labelEl;
+    const metrics = opts.metrics;
+    const tpl = formState.template;
+    const isBarcode = tpl === 'barcode';
+    const isSimple = tpl === 'simple';
+    const isShipping = tpl === 'shipping';
+    const isLot = tpl === 'lot';
+    const subText = isLot && formState.category === 'packx2' ? formState.subtitle.trim() : '';
+
     labelEl.style.aspectRatio = calibration.widthMm + ' / ' + calibration.heightMm;
     labelEl.style.setProperty('--logo-col-w', metrics.previewLogoColPct + '%');
-    labelEl.classList.toggle('has-subtitle', Boolean(hasSubtitle));
+    labelEl.classList.toggle('has-subtitle', Boolean(subText));
     labelEl.classList.toggle('is-uniform-bold', Boolean(metrics.uniformBold));
+    labelEl.classList.toggle('is-simple-template', isSimple);
+
+    opts.standardLayout.hidden = isBarcode;
+    opts.barcodeLayout.hidden = !isBarcode;
+
+    if (isBarcode) {
+      opts.barcodeLayout.classList.toggle('is-x4', formState.barcodeFormat === 'x4');
+      opts.barcodeLayout.innerHTML = buildBarcodePreviewHtml();
+      return;
+    }
+
+    opts.titleEl.textContent = isShipping
+      ? ('Envío a ' + (formState.destination.trim() || '—'))
+      : (formState.labelTitle.trim() || 'Producto BIPA');
+
+    opts.subtitleEl.hidden = !subText;
+    opts.subtitleEl.textContent = subText;
+
+    const wText = formState.weightText.trim();
+    opts.simpleWeightEl.hidden = !(isSimple && wText);
+    opts.simpleWeightEl.textContent = wText;
+
+    opts.shippingLinesEl.hidden = !isShipping;
+    if (isShipping) {
+      opts.shipLine2El.textContent = 'Remite: ' + (formState.sender.trim() || '—');
+      opts.shipLine3El.textContent = 'Tel: ' + (formState.phone.trim() || '—');
+    }
+
+    opts.lotGridEl.hidden = !isLot;
+    if (isLot) {
+      opts.netEl.textContent = formState.netContent.trim() || '—';
+      opts.lotEl.textContent = formState.lot.trim() || '—';
+      opts.elabEl.textContent = formState.elaboration.trim() || '—';
+      opts.expEl.textContent = formState.expiry.trim() || '—';
+    }
   }
 
   function renderLivePreview() {
     const batch = BipaZPL.generateLotZpl(formState, calibration);
     const metrics = batch.metrics;
-    const subText = formState.category === 'packx2' ? formState.subtitle.trim() : '';
-    const hasSubtitle = Boolean(subText);
     const metaLabel = calibration.widthMm + ' × ' + calibration.heightMm + ' mm · ' + calibration.dpi + ' dpi';
-
-    applyLabelSurfaceGeometry(els.thermalLabel, metrics, hasSubtitle);
-    applyLabelSurfaceGeometry(els.zoomThermalLabel, metrics, hasSubtitle);
 
     els.previewMetaChip.textContent = metaLabel;
     els.zoomModalTitle.textContent = metaLabel;
 
-    const titleText = formState.labelTitle.trim() || 'Producto BIPA';
-    const netText = formState.netContent.trim() || '—';
-    const lotText = formState.lot.trim() || '—';
-    const elabText = formState.elaboration.trim() || '—';
-    const expText = formState.expiry.trim() || '—';
+    syncPreviewSurface({
+      labelEl: els.thermalLabel,
+      metrics: metrics,
+      standardLayout: els.previewStandardLayout,
+      barcodeLayout: els.previewBarcodeLayout,
+      titleEl: els.previewTitle,
+      subtitleEl: els.previewSubtitle,
+      simpleWeightEl: els.previewSimpleWeight,
+      shippingLinesEl: els.previewShippingLines,
+      shipLine2El: els.previewShipLine2,
+      shipLine3El: els.previewShipLine3,
+      lotGridEl: els.previewLotGrid,
+      netEl: els.previewNetContent,
+      lotEl: els.previewLot,
+      elabEl: els.previewElaboration,
+      expEl: els.previewExpiry
+    });
 
-    els.previewTitle.textContent = titleText;
-    els.previewSubtitle.hidden = !hasSubtitle;
-    els.previewSubtitle.textContent = subText;
-    els.previewNetContent.textContent = netText;
-    els.previewLot.textContent = lotText;
-    els.previewElaboration.textContent = elabText;
-    els.previewExpiry.textContent = expText;
-
-    // Sincronizar copia del modal ampliado
-    els.zoomTitle.textContent = titleText;
-    els.zoomSubtitle.hidden = !hasSubtitle;
-    els.zoomSubtitle.textContent = subText;
-    els.zoomNetContent.textContent = netText;
-    els.zoomLot.textContent = lotText;
-    els.zoomElaboration.textContent = elabText;
-    els.zoomExpiry.textContent = expText;
+    syncPreviewSurface({
+      labelEl: els.zoomThermalLabel,
+      metrics: metrics,
+      standardLayout: els.zoomStandardLayout,
+      barcodeLayout: els.zoomBarcodeLayout,
+      titleEl: els.zoomTitle,
+      subtitleEl: els.zoomSubtitle,
+      simpleWeightEl: els.zoomSimpleWeight,
+      shippingLinesEl: els.zoomShippingLines,
+      shipLine2El: els.zoomShipLine2,
+      shipLine3El: els.zoomShipLine3,
+      lotGridEl: els.zoomLotGrid,
+      netEl: els.zoomNetContent,
+      lotEl: els.zoomLot,
+      elabEl: els.zoomElaboration,
+      expEl: els.zoomExpiry
+    });
 
     if (!isPrinting) {
       els.btnPrintUsbLabel.textContent =
@@ -544,7 +791,7 @@
           : 'Imprimir en Zebra';
     }
 
-    if (!els.zplCodeContainer.hidden) {
+    if (!els.zplCodeContainer.hidden && isAdmin()) {
       renderZplPreview(batch);
     }
 
@@ -603,7 +850,9 @@
 
     if (!BipaZebraUSB.isWebUsbSupported()) {
       showAlert(
-        'Este navegador no soporta WebUSB. Abre esta app en Google Chrome en Android (HTTPS) o pulsa «Imprimir vía RawBT».',
+        isAdmin()
+          ? 'Este navegador no soporta WebUSB. Usa Google Chrome en Android (HTTPS) o pulsa «Imprimir vía RawBT».'
+          : 'Este navegador no soporta WebUSB. Abre la app en Google Chrome desde Android con el cable USB OTG conectado.',
         'warning'
       );
       return;
@@ -639,6 +888,7 @@
   }
 
   async function handlePrintRawbt() {
+    if (!isAdmin()) return;
     hideAlert();
     readFormStateFromInputs();
     await BipaZPL.loadLogo('./assets/logo-bipa.png');
@@ -657,6 +907,7 @@
   }
 
   async function handleCopyZpl() {
+    if (!isAdmin()) return;
     await BipaZPL.loadLogo('./assets/logo-bipa.png');
     const batch = BipaZPL.generateLotZpl(formState, calibration);
     try {
@@ -683,38 +934,84 @@
      Eventos del DOM
      ------------------------------------------------------------------------ */
   function bindEvents() {
+    // Selección de perfil
+    els.btnSelectOperator.addEventListener('click', function () {
+      BipaAuth.saveRole('operator');
+      applyRoleUI('operator');
+      showToast('Sesión iniciada: Encargado de impresión');
+    });
+
+    els.btnSelectAdmin.addEventListener('click', function () {
+      const opening = els.adminPinBox.hidden;
+      els.adminPinBox.hidden = !opening;
+      els.btnSelectAdmin.setAttribute('aria-expanded', String(opening));
+      els.adminPinError.hidden = true;
+      if (opening) {
+        setTimeout(function () { els.inputAdminPin.focus(); }, 60);
+      }
+    });
+
+    els.btnTogglePinVisibility.addEventListener('click', function () {
+      const showing = els.inputAdminPin.type === 'text';
+      els.inputAdminPin.type = showing ? 'password' : 'text';
+      els.btnTogglePinVisibility.textContent = showing ? 'Mostrar' : 'Ocultar';
+    });
+
+    els.adminPinBox.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      els.adminPinError.hidden = true;
+      const pin = els.inputAdminPin.value.trim();
+      const ok = await BipaAuth.verifyAdminPin(pin);
+      if (!ok) {
+        els.adminPinError.textContent = 'PIN incorrecto. Verifica los dígitos e inténtalo de nuevo.';
+        els.adminPinError.hidden = false;
+        els.inputAdminPin.select();
+        return;
+      }
+      BipaAuth.saveRole('admin');
+      applyRoleUI('admin');
+      showToast('Bienvenido, Administrador');
+    });
+
+    els.btnSwitchProfile.addEventListener('click', function () {
+      const wasOperator = !isAdmin();
+      BipaAuth.clearRole();
+      showRoleScreen(wasOperator);
+    });
+
     // Conexión USB
     els.btnConnectUsb.addEventListener('click', function () {
       handleConnectUsb(false);
     });
     els.btnConnectAny.addEventListener('click', function () {
+      if (!isAdmin()) return;
       handleConnectUsb(true);
     });
     els.btnCloseAlert.addEventListener('click', hideAlert);
 
-    // Vista ampliada (modal fullscreen)
+    // Vista ampliada
     els.btnOpenZoom.addEventListener('click', openZoomModal);
     els.btnCloseZoom.addEventListener('click', closeZoomModal);
     els.btnToggleRotate.addEventListener('click', function () {
       applyZoomRotation(!isZoomRotated);
     });
     els.zoomStage.addEventListener('click', function (ev) {
-      if (ev.target === els.zoomStage) {
-        closeZoomModal();
-      }
+      if (ev.target === els.zoomStage) closeZoomModal();
     });
     document.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape' && !els.zoomModal.hidden) {
-        closeZoomModal();
-      }
+      if (ev.key === 'Escape' && !els.zoomModal.hidden) closeZoomModal();
     });
 
-    // Interactividad directa en la vista previa térmica
+    // Interactividad en vista previa (solo activa para Admin)
     els.previewLogoBtn.addEventListener('click', function () {
       focusAndScrollTo(els.inputProductSearch, els.catalogSection, false);
     });
     els.previewTitle.addEventListener('click', function () {
-      if (formState.category === 'intenciones') {
+      if (formState.template === 'simple') {
+        focusAndScrollTo(els.inputSimpleTitle, els.groupSimpleFields, true);
+      } else if (formState.template === 'shipping') {
+        focusAndScrollTo(els.inputShipDest, els.groupShippingFields, true);
+      } else if (formState.category === 'intenciones') {
         focusAndScrollTo(els.inputIntentionName, els.groupIntentionField, true);
       } else if (formState.category === 'packx2') {
         focusAndScrollTo(els.inputPackTitle, els.groupPackFields, true);
@@ -738,13 +1035,18 @@
       focusAndScrollTo(els.inputExpiry, null, true);
     });
 
-    // 3 pestañas de catálogo + búsqueda
+    // Pestañas y buscador
     els.catalogTabs.addEventListener('click', function (ev) {
       const btn = ev.target.closest('.segmented-btn');
       if (!btn) return;
       switchCategory(btn.dataset.category);
     });
-
+    els.adminCategoryTabs.addEventListener('click', function (ev) {
+      if (!isAdmin()) return;
+      const btn = ev.target.closest('.cat-chip');
+      if (!btn) return;
+      switchCategory(btn.dataset.category);
+    });
     els.catalogCrossHint.addEventListener('click', function (ev) {
       const btn = ev.target.closest('[data-jump-category]');
       if (!btn) return;
@@ -761,14 +1063,13 @@
       renderCatalogList();
       els.inputProductSearch.focus();
     });
-
     els.productList.addEventListener('click', function (ev) {
       const item = ev.target.closest('[data-product-id]');
       if (!item) return;
       selectProduct(item.dataset.productId, true);
     });
 
-    // Selectores rápidos de Aroma 1 y Aroma 2 para Pack x2
+    // Pack x2 selects rápidos
     function handlePackComboSelectChange() {
       formState.comboAroma1 = els.selectPackAroma1.value;
       formState.comboAroma2 = els.selectPackAroma2.value;
@@ -779,7 +1080,13 @@
     els.selectPackAroma1.addEventListener('change', handlePackComboSelectChange);
     els.selectPackAroma2.addEventListener('change', handlePackComboSelectChange);
 
-    // Campos editables dinámicos en tiempo real
+    // Formato de código de barras
+    els.selectBarcodeFormat.addEventListener('change', function () {
+      formState.barcodeFormat = els.selectBarcodeFormat.value;
+      renderLivePreview();
+    });
+
+    // Campos editables de Admin
     const textInputs = [
       els.inputLabelTitle,
       els.inputIntentionName,
@@ -788,7 +1095,15 @@
       els.inputNetContent,
       els.inputLot,
       els.inputElaboration,
-      els.inputExpiry
+      els.inputExpiry,
+      els.inputSimpleTitle,
+      els.inputSimpleWeight,
+      els.inputShipDest,
+      els.inputShipSender,
+      els.inputShipPhone,
+      els.inputBarcodeTitle,
+      els.inputBarcodeEan,
+      els.inputBarcodeCpe
     ];
     textInputs.forEach(function (input) {
       input.addEventListener('input', function () {
@@ -800,21 +1115,18 @@
       });
     });
 
-    // Restaurar lote base (lote.txt) y datos de plantilla del producto actual
+    // Restaurar lote base
     els.btnResetLotDefaults.addEventListener('click', function () {
       formState.lot = BipaCatalog.DEFAULT_LOT_DATA.lot;
       formState.elaboration = BipaCatalog.DEFAULT_LOT_DATA.elaboration;
       formState.expiry = BipaCatalog.DEFAULT_LOT_DATA.expiry;
-      const prod = BipaCatalog.getById(formState.productId);
-      formState.labelTitle = prod.labelTitle;
+      const prod = BipaCatalog.getById(formState.productId, isAdmin());
+      formState.labelTitle = prod.labelTitle || prod.name;
       formState.intentionName = prod.intentionName || '';
       formState.subtitle = prod.subtitle || '';
       formState.comboAroma1 = prod.comboAromas ? prod.comboAromas[0] : BipaCatalog.AROMAS_130G[0];
       formState.comboAroma2 = prod.comboAromas ? prod.comboAromas[1] : BipaCatalog.AROMAS_130G[5];
-      formState.netContent = prod.netContent;
-      formState.compactLogo = prod.compactLogo;
-      formState.uniformBold = prod.uniformBold;
-
+      formState.netContent = prod.netContent || '';
       applyFormStateToInputs();
       persistLotState();
       renderLivePreview();
@@ -844,13 +1156,14 @@
       renderLivePreview();
     });
 
-    // Botones de impresión
+    // Impresión
     els.btnPrintUsb.addEventListener('click', handlePrintUsb);
     els.btnPrintRawbt.addEventListener('click', handlePrintRawbt);
 
-    // Calibración: DPI
+    // Calibración (Admin)
     [els.btnDpi203, els.btnDpi300].forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (!isAdmin()) return;
         const nextDpi = Number(btn.dataset.dpi) === 300 ? 300 : 203;
         if (nextDpi === calibration.dpi) return;
         calibration.dpi = nextDpi;
@@ -861,7 +1174,6 @@
       });
     });
 
-    // Calibración: medidas, offsets, oscuridad y velocidad
     [
       els.inputWidthMm,
       els.inputHeightMm,
@@ -871,14 +1183,15 @@
       els.inputSpeed
     ].forEach(function (input) {
       input.addEventListener('input', function () {
+        if (!isAdmin()) return;
         readCalibrationFromInputs();
         renderLivePreview();
       });
     });
 
-    // Botones -/+ de desplazamiento X e Y
     document.querySelectorAll('.mini-step-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (!isAdmin()) return;
         const target = document.getElementById(btn.dataset.stepTarget);
         const delta = parseInt(btn.dataset.stepDelta, 10) || 0;
         if (!target) return;
@@ -890,8 +1203,8 @@
       });
     });
 
-    // Ver / Copiar ZPL
     els.btnToggleZpl.addEventListener('click', async function () {
+      if (!isAdmin()) return;
       const opening = els.zplCodeContainer.hidden;
       els.zplCodeContainer.hidden = !opening;
       els.btnToggleZpl.textContent = opening ? 'Ocultar código ZPL II' : 'Ver código ZPL II';
@@ -902,8 +1215,8 @@
     });
     els.btnCopyZpl.addEventListener('click', handleCopyZpl);
 
-    // Restablecer calibración
     els.btnResetCalibration.addEventListener('click', function () {
+      if (!isAdmin()) return;
       calibration = BipaStorage.resetCalibration();
       applyCalibrationToInputs();
       renderLivePreview();
@@ -911,31 +1224,25 @@
     });
   }
 
-  /* ------------------------------------------------------------------------
-     Registro de Service Worker (PWA standalone con rutas relativas)
-     ------------------------------------------------------------------------ */
   function registerServiceWorker() {
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-      navigator.serviceWorker.register('./sw.js').catch(function () {
-        // Ignorar silenciosamente si el entorno bloquea SW
-      });
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
     }
   }
 
-  /* ------------------------------------------------------------------------
-     Inicio
-     ------------------------------------------------------------------------ */
   function init() {
-    populatePackAromaSelects();
-    renderCategoryTabs();
-    applyFormStateToInputs();
+    populateSelectOptions();
     applyCalibrationToInputs();
-    renderCatalogList();
     bindEvents();
-    renderLivePreview();
+
+    if (currentRole === 'operator' || currentRole === 'admin') {
+      applyRoleUI(currentRole);
+    } else {
+      showRoleScreen(false);
+    }
 
     BipaZPL.loadLogo('./assets/logo-bipa.png').then(function () {
-      if (!els.zplCodeContainer.hidden) {
+      if (!els.zplCodeContainer.hidden && isAdmin()) {
         renderZplPreview();
       }
     });
