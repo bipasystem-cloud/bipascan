@@ -714,7 +714,7 @@
     labelEl.style.aspectRatio = calibration.widthMm + ' / ' + calibration.heightMm;
     labelEl.style.setProperty('--logo-col-w', metrics.previewLogoColPct + '%');
     labelEl.classList.toggle('is-preset-50x30', Boolean(metrics.isLargePreset));
-    labelEl.classList.toggle('is-short-labels', Boolean(metrics.useShortLabels));
+    labelEl.classList.toggle('is-short-net-label', Boolean(metrics.useShortNetLabel));
     labelEl.classList.toggle('has-subtitle', Boolean(subText));
     labelEl.classList.toggle('is-uniform-bold', Boolean(metrics.uniformBold));
     labelEl.classList.toggle('is-simple-template', isSimple);
@@ -747,9 +747,12 @@
 
     opts.lotGridEl.hidden = !isLot;
     if (isLot) {
-      const fieldKeys = metrics.useShortLabels
-        ? ['Neto:', 'Lote:', 'Elab.:', 'Venc.:']
-        : ['Cont. Neto:', 'Lote:', 'Elaboración:', 'Vencimiento:'];
+      const fieldKeys = [
+        metrics.useShortNetLabel ? 'Neto:' : 'Cont. Neto:',
+        'Lote:',
+        'Elaboración:',
+        'Vencimiento:'
+      ];
       const keyEls = opts.lotGridEl.querySelectorAll('.thermal-field-key');
       for (let i = 0; i < keyEls.length && i < fieldKeys.length; i++) {
         keyEls[i].textContent = fieldKeys[i];
