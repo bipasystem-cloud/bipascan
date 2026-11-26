@@ -23,7 +23,7 @@
       label: 'Grande (50 × 30 mm)',
       widthMm: 50,
       heightMm: 30,
-      pw203: 400,
+      pw203: 448,
       ll203: 240
     })
   });
@@ -325,26 +325,16 @@
     let useShortNetLabel = false;
 
     if (presetId === '50x30') {
-      // Columna izquierda estricta X=4..128 (124 dots a 203 dpi) antes del separador en X=136
+      // Columna izquierda compacta X=6..116 (110 dots a 203 dpi) antes del separador en X=124
       const logoMaxH = Math.round(ll * 0.84);
-      logoW = Math.round(124 * scale);
+      logoW = Math.round(110 * scale);
       logoH = Math.round(logoW / logoAspect);
       if (logoH > logoMaxH) {
         logoH = logoMaxH;
         logoW = Math.round(logoH * logoAspect);
       }
-      previewLogoColPct = 32;
-
-      if (template === 'lot') {
-        const netLabelW = Math.round(20 * scale);
-        const netGap = Math.round(8 * scale);
-        const fullRightW = Math.round(246 * scale);
-        const fullNetLabelColW = Math.ceil(11 * netLabelW * 0.54) + netGap;
-        const maxFullNetValW = Math.max(Math.round(40 * scale), fullRightW - fullNetLabelColW);
-        const safeNet = sanitizeZplField(data.netContent || '');
-        const netValTargetW = Math.round(25 * scale);
-        useShortNetLabel = Boolean(safeNet) && (Math.ceil(safeNet.length * netValTargetW * 0.54) > maxFullNetValW);
-      }
+      previewLogoColPct = 27.5;
+      useShortLabels = (template === 'lot');
     } else {
       const logoWidthRatio = isLargePreset
         ? (compactLogo ? 0.36 : 0.415)
@@ -500,14 +490,14 @@
     let fullRightWidth;
 
     if (m.paperPreset === '50x30') {
-      marginLeft = Math.round(4 * scale);
-      marginRight = Math.round(6 * scale);
+      marginLeft = Math.round(6 * scale);
+      marginRight = Math.round(4 * scale);
       logoX = Math.max(0, marginLeft + offX);
       dividerThick = Math.max(2, Math.round(2 * scale));
-      dividerX = Math.max(0, Math.round(136 * scale) + offX);
+      dividerX = Math.max(0, Math.round(124 * scale) + offX);
       dividerY = Math.max(0, Math.round(14 * scale) + offY);
       dividerH = Math.max(20, Math.round(212 * scale));
-      colT = Math.max(0, Math.round(148 * scale) + offX);
+      colT = Math.max(0, Math.round(134 * scale) + offX);
       fullRightWidth = Math.max(
         Math.round(90 * scale),
         pw - (colT - offX) - marginRight
@@ -623,86 +613,65 @@
     const safeExp = sanitizeZplField(data.expiry || '');
 
     if (m.paperPreset === '50x30') {
-      // Preset 50 x 30 mm (^PW400, ^LL240 a 203 dpi): logo X=4..128, divisor X=136 y jerarquía Aroma + Peso
+      // Preset 50 x 30 mm (^PW448, ^LL240 a 203 dpi): título SIEMPRE en 1 sola línea, Neto grande, Lote/Elab./Venc. ordenados abajo
+      const titleChars = Math.max(1, safeTitle.length);
+      let titleH;
+      let titleW;
+      if (titleChars <= 22) {
+        titleH = Math.round((safeSubtitle ? 30 : 34) * scale);
+        const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
+        titleW = Math.max(Math.round(22 * scale), Math.min(Math.round((safeSubtitle ? 26 : 30) * scale), maxFitW));
+      } else {
+        titleH = Math.round((safeSubtitle ? 28 : 30) * scale);
+        const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
+        const minTitleW = titleChars <= 30 ? Math.round(22 * scale) : Math.round(18 * scale);
+        titleW = Math.max(minTitleW, Math.min(Math.round(28 * scale), maxFitW));
+      }
+
       if (safeSubtitle) {
         const line1Y = Math.max(0, Math.round(10 * scale) + offY);
-        const f1 = fitProportionalFont(safeTitle, 24 * scale, 23 * scale, fullRightWidth, 16 * scale);
-        const line2Y = Math.max(0, Math.round(37 * scale) + offY);
-        const f2 = fitProportionalFont(safeSubtitle, 18 * scale, 17 * scale, fullRightWidth, 13 * scale);
-        zpl.push('^FO' + colT + ',' + line1Y + '^A0N,' + f1.h + ',' + f1.w + '^FD' + safeTitle + '^FS');
-        zpl.push('^FO' + colT + ',' + line2Y + '^A0N,' + f2.h + ',' + f2.w + '^FD' + safeSubtitle + '^FS');
+        const line2Y = Math.max(0, Math.round(44 * scale) + offY);
+        const subH = Math.round(18 * scale);
+        const subW = fitFontWidth(safeSubtitle, 17 * scale, fullRightWidth, Math.round(11 * scale));
+        zpl.push('^FO' + colT + ',' + line1Y + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
+        zpl.push('^FO' + colT + ',' + line2Y + '^A0N,' + subH + ',' + subW + '^FD' + safeSubtitle + '^FS');
       } else {
-        const h30 = Math.round(30 * scale);
-        const w28 = Math.round(28 * scale);
-        const h24 = Math.round(24 * scale);
-        const w22 = Math.round(22 * scale);
-        if (safeTitle.length * w28 * 0.54 <= fullRightWidth) {
-          const titleY = Math.max(0, Math.round(16 * scale) + offY);
-          zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + h30 + ',' + w28 + '^FD' + safeTitle + '^FS');
-        } else if (safeTitle.length * w22 * 0.54 <= fullRightWidth) {
-          const titleY = Math.max(0, Math.round(18 * scale) + offY);
-          zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + h24 + ',' + w22 + '^FD' + safeTitle + '^FS');
-        } else {
-          const maxChars = Math.max(10, Math.floor(fullRightWidth / (Math.round(21 * scale) * 0.54)));
-          const wrapped = wrapTwoLines(safeTitle, maxChars);
-          if (wrapped.length === 1) {
-            const singleY = Math.max(0, Math.round(18 * scale) + offY);
-            const fSingle = fitProportionalFont(wrapped[0], 22 * scale, 21 * scale, fullRightWidth, 16 * scale);
-            zpl.push('^FO' + colT + ',' + singleY + '^A0N,' + fSingle.h + ',' + fSingle.w + '^FD' + wrapped[0] + '^FS');
-          } else {
-            const longest = wrapped[0].length >= wrapped[1].length ? wrapped[0] : wrapped[1];
-            const fWrap = fitProportionalFont(longest, 22 * scale, 21 * scale, fullRightWidth, 16 * scale);
-            const y1 = Math.max(0, Math.round(10 * scale) + offY);
-            const y2 = Math.max(0, Math.round(35 * scale) + offY);
-            zpl.push('^FO' + colT + ',' + y1 + '^A0N,' + fWrap.h + ',' + fWrap.w + '^FD' + wrapped[0] + '^FS');
-            zpl.push('^FO' + colT + ',' + y2 + '^A0N,' + fWrap.h + ',' + fWrap.w + '^FD' + wrapped[1] + '^FS');
-          }
-        }
+        const titleY = Math.max(0, Math.round(18 * scale) + offY);
+        zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
       }
 
-      // Fila destacada de Peso / Cont. Neto (segundo más grande, Y=66)
-      const netValY = Math.max(0, Math.round(66 * scale) + offY);
-      const netKeyY = Math.max(0, Math.round(69 * scale) + offY);
-      const netGap = Math.round(8 * scale);
-      if (!m.useShortNetLabel) {
-        const netKeyH = Math.round(22 * scale);
-        const netKeyW = Math.round(20 * scale);
-        const netColX = colT + Math.ceil(11 * netKeyW * 0.54) + netGap;
-        const maxNetW = Math.max(Math.round(50 * scale), fullRightWidth - (netColX - colT));
-        zpl.push('^FO' + colT + ',' + netKeyY + '^A0N,' + netKeyH + ',' + netKeyW + '^FDCont. Neto:^FS');
-        if (safeNet) {
-          const fNet = fitProportionalFont(safeNet, 26 * scale, 25 * scale, maxNetW, 18 * scale);
-          zpl.push('^FO' + netColX + ',' + netValY + '^A0N,' + fNet.h + ',' + fNet.w + '^FD' + safeNet + '^FS');
-        }
-      } else {
-        const netKeyH = Math.round(21 * scale);
-        const netKeyW = Math.round(20 * scale);
-        const netColX = colT + Math.ceil(5 * netKeyW * 0.54) + netGap;
-        const maxNetW = Math.max(Math.round(60 * scale), fullRightWidth - (netColX - colT));
-        zpl.push('^FO' + colT + ',' + netKeyY + '^A0N,' + netKeyH + ',' + netKeyW + '^FDNeto:^FS');
-        if (safeNet) {
-          const fNet = fitProportionalFont(safeNet, 26 * scale, 25 * scale, maxNetW, 18 * scale);
-          zpl.push('^FO' + netColX + ',' + netValY + '^A0N,' + fNet.h + ',' + fNet.w + '^FD' + safeNet + '^FS');
-        }
+      // Columna de valores alineada en X=215 (203 dpi), dejando 229 dots libres hasta X=444
+      const colV = Math.round(215 * scale) + offX;
+      const maxValW = Math.max(Math.round(80 * scale), pw - (colV - offX) - marginRight);
+
+      // Fila Neto (segundo texto más grande, muy notorio en Y=68)
+      const netKeyY = Math.max(0, Math.round(71 * scale) + offY);
+      const netValY = Math.max(0, Math.round(68 * scale) + offY);
+      const netKeyH = Math.round(26 * scale);
+      const netKeyW = Math.round(24 * scale);
+      zpl.push('^FO' + colT + ',' + netKeyY + '^A0N,' + netKeyH + ',' + netKeyW + '^FDNeto:^FS');
+      if (safeNet) {
+        const netValH = Math.round(30 * scale);
+        const maxNetFitW = Math.floor(maxValW / (Math.max(1, safeNet.length) * 0.52));
+        const netValW = Math.max(Math.round(20 * scale), Math.min(Math.round(28 * scale), maxNetFitW));
+        zpl.push('^FO' + colV + ',' + netValY + '^A0N,' + netValH + ',' + netValW + '^FD' + safeNet + '^FS');
       }
 
-      // Filas inferiores de control (Lote, Elaboración, Vencimiento) más pequeñas y alineadas
-      const metaLabelH = Math.round(18 * scale);
-      const metaLabelW = Math.round(17 * scale);
-      const colV = Math.max(colT + Math.round(112 * scale), Math.round(260 * scale) + offX);
-      const maxMetaValW = Math.max(Math.round(50 * scale), fullRightWidth - (colV - colT));
+      // Filas inferiores de control (claramente más pequeñas: ^A0N,18,17 en Y=120, 154, 188)
+      const metaH = Math.round(18 * scale);
+      const metaW = Math.round(17 * scale);
       const metaRows = [
-        { label: 'Lote:', value: safeLot, y: 118 },
-        { label: 'Elaboración:', value: safeElab, y: 154 },
-        { label: 'Vencimiento:', value: safeExp, y: 190 }
+        { label: 'Lote:', value: safeLot, y: 120 },
+        { label: 'Elab.:', value: safeElab, y: 154 },
+        { label: 'Venc.:', value: safeExp, y: 188 }
       ];
 
       for (let i = 0; i < metaRows.length; i++) {
         const y = Math.max(0, Math.round(metaRows[i].y * scale) + offY);
-        zpl.push('^FO' + colT + ',' + y + '^A0N,' + metaLabelH + ',' + metaLabelW + '^FD' + metaRows[i].label + '^FS');
+        zpl.push('^FO' + colT + ',' + y + '^A0N,' + metaH + ',' + metaW + '^FD' + metaRows[i].label + '^FS');
         if (metaRows[i].value) {
-          const fVal = fitProportionalFont(metaRows[i].value, 18 * scale, 18 * scale, maxMetaValW, 13 * scale);
-          zpl.push('^FO' + colV + ',' + y + '^A0N,' + fVal.h + ',' + fVal.w + '^FD' + metaRows[i].value + '^FS');
+          const valW = fitFontWidth(metaRows[i].value, metaW, maxValW, Math.round(12 * scale));
+          zpl.push('^FO' + colV + ',' + y + '^A0N,' + metaH + ',' + valW + '^FD' + metaRows[i].value + '^FS');
         }
       }
 
