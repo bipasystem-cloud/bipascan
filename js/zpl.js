@@ -558,25 +558,24 @@
     const safeExp = sanitizeZplField(data.expiry || '');
 
     if (m.paperPreset === '50x30') {
-      // Preset Grande (56 x 30 mm, ^PW448, ^LL240 a 203 dpi): logo X=4..170, divisor X=178, textos X=188..444
+      // Preset Grande (56 x 30 mm, ^PW448, ^LL240 a 203 dpi): tramos exactos para igualar el peso visual de Neto (^A0N,28,24)
       const titleChars = Math.max(1, safeTitle.length);
       let titleH;
-      let targetW;
-      if (titleChars <= 16) {
-        titleH = Math.round((safeSubtitle ? 28 : 34) * scale);
-        targetW = Math.round((safeSubtitle ? 21 : 24) * scale);
-      } else if (titleChars <= 22) {
-        titleH = Math.round((safeSubtitle ? 26 : 32) * scale);
-        targetW = Math.round((safeSubtitle ? 19 : 21) * scale);
+      let titleW;
+      if (titleChars <= 24) {
+        titleH = Math.round(28 * scale);
+        titleW = Math.round(24 * scale);
       } else if (titleChars <= 28) {
-        titleH = Math.round((safeSubtitle ? 26 : 30) * scale);
-        targetW = Math.round(18 * scale);
+        titleH = Math.round(28 * scale);
+        titleW = Math.round(21 * scale);
+      } else if (titleChars <= 33) {
+        titleH = Math.round(28 * scale);
+        titleW = Math.round(18 * scale);
       } else {
         titleH = Math.round(26 * scale);
-        targetW = Math.round(15 * scale);
+        const maxExtremeFitW = Math.floor(fullRightWidth / (titleChars * 0.44));
+        titleW = Math.max(Math.round(12 * scale), Math.min(Math.round(16 * scale), maxExtremeFitW));
       }
-      const maxFitW = Math.floor(fullRightWidth / (titleChars * 0.50));
-      const titleW = Math.max(Math.round(12 * scale), Math.min(targetW, maxFitW));
 
       if (safeSubtitle) {
         const line1Y = Math.max(0, Math.round(12 * scale) + offY);

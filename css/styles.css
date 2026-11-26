@@ -917,7 +917,7 @@ body.role-operator #thermalLabel .thermal-lot-row {
   gap: 1.5cqw;
 }
 .thermal-label.is-preset-50x30 .thermal-lot-title {
-  font-size: 4.9cqw;
+  font-size: 4.45cqw;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: normal;
@@ -969,7 +969,7 @@ body.role-operator #thermalLabel .thermal-lot-row {
   gap: 1cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-title {
-  font-size: 4.35cqw;
+  font-size: 4.15cqw;
   margin-bottom: 0.35cqw;
 }
 .thermal-label.is-preset-50x30.has-subtitle .thermal-lot-grid {
