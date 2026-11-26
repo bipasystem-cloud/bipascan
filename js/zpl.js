@@ -220,6 +220,57 @@
     return Math.max(minWidthDots, fitted);
   }
 
+  function fitSquareFontSize(text, targetSizeDots, maxAvailableDots, minSizeDots) {
+    const chars = Math.max(1, String(text || '').length);
+    const target = Math.round(targetSizeDots);
+    const floorMin = Math.max(10, Math.round(minSizeDots || 12));
+    if (chars * target * 0.54 <= maxAvailableDots) {
+      return target;
+    }
+    const fitted = Math.floor(maxAvailableDots / (chars * 0.54));
+    return Math.max(floorMin, fitted);
+  }
+
+  function wrapTwoLines(text, maxCharsPerLine) {
+    const clean = sanitizeZplField(text);
+    if (!clean || clean.length <= maxCharsPerLine) {
+      return [clean];
+    }
+    const words = clean.split(/\s+/);
+    if (words.length < 2) {
+      return [clean.slice(0, maxCharsPerLine), clean.slice(maxCharsPerLine)];
+    }
+    let bestIdx = 1;
+    let bestDiff = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const left = words.slice(0, i).join(' ');
+      const right = words.slice(i).join(' ');
+      if (left.length <= maxCharsPerLine && right.length <= maxCharsPerLine) {
+        const diff = Math.abs(left.length - right.length);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestIdx = i;
+        }
+      }
+    }
+    if (bestDiff < Infinity) {
+      return [words.slice(0, bestIdx).join(' '), words.slice(bestIdx).join(' ')];
+    }
+    let line1 = '';
+    let splitAt = 1;
+    for (let i = 0; i < words.length; i++) {
+      const candidate = line1 ? (line1 + ' ' + words[i]) : words[i];
+      if (candidate.length <= maxCharsPerLine || !line1) {
+        line1 = candidate;
+        splitAt = i + 1;
+      } else {
+        break;
+      }
+    }
+    const line2 = words.slice(splitAt).join(' ');
+    return line2 ? [line1, line2] : [line1];
+  }
+
   function computeLayoutMetrics(data, cal) {
     const dpi = Number(cal.dpi) === 300 ? 300 : 203;
     const dotsPerMm = dpi / 25.4;
@@ -248,23 +299,55 @@
     const compactLogo = template !== 'lot' || category !== 'aromas' || Boolean(data.compactLogo || hasSubtitle);
     const uniformBold = template === 'lot' && (category !== 'aromas' || Boolean(data.uniformBold));
 
-    // En 50x30 ampliamos el logo ~15%-20% respecto a 50x20 manteniendo margen limpio
-    const logoWidthRatio = isLargePreset
-      ? (compactLogo ? 0.36 : 0.415)
-      : (compactLogo ? 0.305 : 0.365);
-    const logoMaxH = Math.round(ll * (isLargePreset ? 0.78 : 0.82));
     const logoAspect = logoCropBounds && logoCropBounds.h > 0
       ? (logoCropBounds.w / logoCropBounds.h)
       : 1.648;
 
-    let logoW = Math.round(pw * logoWidthRatio);
-    let logoH = Math.round(logoW / logoAspect);
-    if (logoH > logoMaxH) {
-      logoH = logoMaxH;
-      logoW = Math.round(logoH * logoAspect);
-    }
+    let logoW;
+    let logoH;
+    let previewLogoColPct;
+    let useShortLabels = false;
 
-    const previewLogoColPct = Number(((logoW / pw) * 100).toFixed(2));
+    if (presetId === '50x30') {
+      // Columna izquierda estricta X=10..142 (132 dots a 203 dpi) antes del separador en X=150
+      const logoMaxH = Math.round(ll * 0.84);
+      logoW = Math.round(132 * scale);
+      logoH = Math.round(logoW / logoAspect);
+      if (logoH > logoMaxH) {
+        logoH = logoMaxH;
+        logoW = Math.round(logoH * logoAspect);
+      }
+      previewLogoColPct = 35.5;
+
+      if (template === 'lot') {
+        const fieldSize = Math.round(19 * scale);
+        const fullGap = Math.round(12 * scale);
+        const fullRightW = Math.round(230 * scale);
+        const fullLabelColW = Math.ceil(12 * fieldSize * 0.54) + fullGap;
+        const fullMaxValW = Math.max(Math.round(40 * scale), fullRightW - fullLabelColW);
+        const vals = [
+          sanitizeZplField(data.netContent || ''),
+          sanitizeZplField(data.lot || ''),
+          sanitizeZplField(data.elaboration || ''),
+          sanitizeZplField(data.expiry || '')
+        ];
+        useShortLabels = vals.some(function (v) {
+          return v && Math.ceil(v.length * fieldSize * 0.54) > fullMaxValW;
+        });
+      }
+    } else {
+      const logoWidthRatio = isLargePreset
+        ? (compactLogo ? 0.36 : 0.415)
+        : (compactLogo ? 0.305 : 0.365);
+      const logoMaxH = Math.round(ll * (isLargePreset ? 0.78 : 0.82));
+      logoW = Math.round(pw * logoWidthRatio);
+      logoH = Math.round(logoW / logoAspect);
+      if (logoH > logoMaxH) {
+        logoH = logoMaxH;
+        logoW = Math.round(logoH * logoAspect);
+      }
+      previewLogoColPct = Math.max(24, Math.min(43, Number(((logoW / pw) * 100).toFixed(2))));
+    }
 
     return {
       paperPreset: presetId,
@@ -281,9 +364,10 @@
       hasSubtitle: hasSubtitle,
       compactLogo: compactLogo,
       uniformBold: uniformBold,
+      useShortLabels: useShortLabels,
       logoW: logoW,
       logoH: logoH,
-      previewLogoColPct: Math.max(24, Math.min(43, previewLogoColPct))
+      previewLogoColPct: previewLogoColPct
     };
   }
 
@@ -394,24 +478,48 @@
     }
 
     // ---- BLOQUE IZQUIERDO COMPARTIDO: LOGO ^GFA + LÍNEA DIVISORIA ^GB ----
-    const marginLeft = Math.round((isLarge ? 6 : 4) * scale);
-    const marginRight = Math.round((isLarge ? 5 : 4) * scale);
-    const logoX = Math.max(0, marginLeft + offX);
+    let marginLeft;
+    let marginRight;
+    let logoX;
+    let dividerThick;
+    let dividerX;
+    let dividerY;
+    let dividerH;
+    let colT;
+    let fullRightWidth;
+
+    if (m.paperPreset === '50x30') {
+      marginLeft = Math.round(10 * scale);
+      marginRight = Math.round(8 * scale);
+      logoX = Math.max(0, marginLeft + offX);
+      dividerThick = Math.max(2, Math.round(2 * scale));
+      dividerX = Math.max(0, Math.round(150 * scale) + offX);
+      dividerY = Math.max(0, Math.round(16 * scale) + offY);
+      dividerH = Math.max(20, Math.round(208 * scale));
+      colT = Math.max(0, Math.round(162 * scale) + offX);
+      fullRightWidth = Math.max(
+        Math.round(90 * scale),
+        pw - (colT - offX) - marginRight
+      );
+    } else {
+      marginLeft = Math.round((isLarge ? 6 : 4) * scale);
+      marginRight = Math.round((isLarge ? 5 : 4) * scale);
+      logoX = Math.max(0, marginLeft + offX);
+      const dividerGap = Math.round((isLarge ? 8 : 5) * scale);
+      dividerThick = Math.max(2, Math.round(2 * scale));
+      const dividerPadY = Math.round((isLarge ? 14 : 6) * scale);
+      dividerX = Math.max(0, marginLeft + m.logoW + dividerGap + offX);
+      dividerY = Math.max(0, dividerPadY + offY);
+      dividerH = Math.max(20, ll - dividerPadY * 2);
+      colT = Math.max(0, dividerX + dividerThick + Math.round((isLarge ? 7 : 6) * scale));
+      fullRightWidth = Math.max(
+        Math.round(90 * scale),
+        pw - (colT - offX) - marginRight
+      );
+    }
+
     const logoY = Math.max(0, Math.round((ll - m.logoH) / 2) + offY);
     const logoGfa = buildLogoGfa(m.logoW, m.logoH);
-
-    const dividerGap = Math.round((isLarge ? 8 : 5) * scale);
-    const dividerThick = Math.max(2, Math.round(2 * scale));
-    const dividerPadY = Math.round((isLarge ? 14 : 6) * scale);
-    const dividerX = Math.max(0, marginLeft + m.logoW + dividerGap + offX);
-    const dividerY = Math.max(0, dividerPadY + offY);
-    const dividerH = Math.max(20, ll - dividerPadY * 2);
-
-    const colT = Math.max(0, dividerX + dividerThick + Math.round((isLarge ? 7 : 6) * scale));
-    const fullRightWidth = Math.max(
-      Math.round(90 * scale),
-      pw - (colT - offX) - marginRight
-    );
 
     if (logoGfa) {
       zpl.push('^FO' + logoX + ',' + logoY + logoGfa.command + '^FS');
@@ -421,19 +529,34 @@
     // ---- PLANTILLA SIMPLE ----
     if (m.template === 'simple') {
       const safeWeight = sanitizeZplField(data.weightText || '');
-      const titleH = Math.round((isLarge ? (safeWeight ? 34 : 38) : (safeWeight ? 28 : 32)) * scale);
-      const titleW = fitFontWidth(safeTitle, (isLarge ? 26 : 22) * scale, fullRightWidth, Math.round(10 * scale));
-      if (safeWeight) {
-        const wH = Math.round((isLarge ? 26 : 22) * scale);
-        const wW = fitFontWidth(safeWeight, (isLarge ? 21 : 18) * scale, fullRightWidth, Math.round(10 * scale));
-        const gapS = Math.round((isLarge ? 16 : 12) * scale);
-        const totalH = titleH + gapS + wH;
-        const y0 = Math.max(Math.round(8 * scale), Math.round((ll - totalH) / 2) + offY);
-        zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
-        zpl.push('^FO' + colT + ',' + (y0 + titleH + gapS) + '^A0N,' + wH + ',' + wW + '^FD' + safeWeight + '^FS');
+      if (m.paperPreset === '50x30') {
+        const titleSize = fitSquareFontSize(safeTitle, (safeWeight ? 26 : 30) * scale, fullRightWidth, 14 * scale);
+        if (safeWeight) {
+          const wSize = fitSquareFontSize(safeWeight, 22 * scale, fullRightWidth, 13 * scale);
+          const gapS = Math.round(18 * scale);
+          const totalH = titleSize + gapS + wSize;
+          const y0 = Math.max(Math.round(10 * scale), Math.round((ll - totalH) / 2) + offY);
+          zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleSize + ',' + titleSize + '^FD' + safeTitle + '^FS');
+          zpl.push('^FO' + colT + ',' + (y0 + titleSize + gapS) + '^A0N,' + wSize + ',' + wSize + '^FD' + safeWeight + '^FS');
+        } else {
+          const y0 = Math.max(Math.round(10 * scale), Math.round((ll - titleSize) / 2) + offY);
+          zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleSize + ',' + titleSize + '^FD' + safeTitle + '^FS');
+        }
       } else {
-        const y0 = Math.max(Math.round(8 * scale), Math.round((ll - titleH) / 2) + offY);
-        zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
+        const titleH = Math.round((isLarge ? (safeWeight ? 34 : 38) : (safeWeight ? 28 : 32)) * scale);
+        const titleW = fitFontWidth(safeTitle, (isLarge ? 26 : 22) * scale, fullRightWidth, Math.round(10 * scale));
+        if (safeWeight) {
+          const wH = Math.round((isLarge ? 26 : 22) * scale);
+          const wW = fitFontWidth(safeWeight, (isLarge ? 21 : 18) * scale, fullRightWidth, Math.round(10 * scale));
+          const gapS = Math.round((isLarge ? 16 : 12) * scale);
+          const totalH = titleH + gapS + wH;
+          const y0 = Math.max(Math.round(8 * scale), Math.round((ll - totalH) / 2) + offY);
+          zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
+          zpl.push('^FO' + colT + ',' + (y0 + titleH + gapS) + '^A0N,' + wH + ',' + wW + '^FD' + safeWeight + '^FS');
+        } else {
+          const y0 = Math.max(Math.round(8 * scale), Math.round((ll - titleH) / 2) + offY);
+          zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
+        }
       }
 
       zpl.push('^PQ' + copies + ',0,1,Y');
@@ -450,19 +573,30 @@
       const line2 = 'Remite: ' + sender;
       const line3 = 'Tel: ' + phone;
 
-      const h1 = Math.round((isLarge ? 30 : 25) * scale);
-      const w1 = fitFontWidth(line1, (isLarge ? 23 : 18) * scale, fullRightWidth, Math.round(9 * scale));
-      const h2 = Math.round((isLarge ? 24 : 20) * scale);
-      const w2 = fitFontWidth(line2, (isLarge ? 19 : 15) * scale, fullRightWidth, Math.round(9 * scale));
-      const h3 = Math.round((isLarge ? 24 : 20) * scale);
-      const w3 = fitFontWidth(line3, (isLarge ? 19 : 15) * scale, fullRightWidth, Math.round(9 * scale));
+      if (m.paperPreset === '50x30') {
+        const s1 = fitSquareFontSize(line1, 24 * scale, fullRightWidth, 13 * scale);
+        const s2 = fitSquareFontSize(line2, 20 * scale, fullRightWidth, 12 * scale);
+        const s3 = fitSquareFontSize(line3, 20 * scale, fullRightWidth, 12 * scale);
+        const step = Math.round(46 * scale);
+        const y0 = Math.max(Math.round(12 * scale), Math.round((ll - step * 3) / 2) + offY);
+        zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + s1 + ',' + s1 + '^FD' + line1 + '^FS');
+        zpl.push('^FO' + colT + ',' + (y0 + step) + '^A0N,' + s2 + ',' + s2 + '^FD' + line2 + '^FS');
+        zpl.push('^FO' + colT + ',' + (y0 + step * 2) + '^A0N,' + s3 + ',' + s3 + '^FD' + line3 + '^FS');
+      } else {
+        const h1 = Math.round((isLarge ? 30 : 25) * scale);
+        const w1 = fitFontWidth(line1, (isLarge ? 23 : 18) * scale, fullRightWidth, Math.round(9 * scale));
+        const h2 = Math.round((isLarge ? 24 : 20) * scale);
+        const w2 = fitFontWidth(line2, (isLarge ? 19 : 15) * scale, fullRightWidth, Math.round(9 * scale));
+        const h3 = Math.round((isLarge ? 24 : 20) * scale);
+        const w3 = fitFontWidth(line3, (isLarge ? 19 : 15) * scale, fullRightWidth, Math.round(9 * scale));
 
-      const step = Math.round((isLarge ? 44 : 34) * scale);
-      const y0 = Math.max(Math.round(8 * scale), Math.round((ll - step * 3) / 2) + offY);
+        const step = Math.round((isLarge ? 44 : 34) * scale);
+        const y0 = Math.max(Math.round(8 * scale), Math.round((ll - step * 3) / 2) + offY);
 
-      zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + h1 + ',' + w1 + '^FD' + line1 + '^FS');
-      zpl.push('^FO' + colT + ',' + (y0 + step) + '^A0N,' + h2 + ',' + w2 + '^FD' + line2 + '^FS');
-      zpl.push('^FO' + colT + ',' + (y0 + step * 2) + '^A0N,' + h3 + ',' + w3 + '^FD' + line3 + '^FS');
+        zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + h1 + ',' + w1 + '^FD' + line1 + '^FS');
+        zpl.push('^FO' + colT + ',' + (y0 + step) + '^A0N,' + h2 + ',' + w2 + '^FD' + line2 + '^FS');
+        zpl.push('^FO' + colT + ',' + (y0 + step * 2) + '^A0N,' + h3 + ',' + w3 + '^FD' + line3 + '^FS');
+      }
       zpl.push('^PQ' + copies + ',0,1,Y');
       zpl.push('^XZ');
       return { zpl: zpl.join('\n') + '\n', count: copies, title: line1, metrics: m };
@@ -476,6 +610,83 @@
     const safeLot = sanitizeZplField(data.lot || '');
     const safeElab = sanitizeZplField(data.elaboration || '');
     const safeExp = sanitizeZplField(data.expiry || '');
+
+    if (m.paperPreset === '50x30') {
+      // Preset 50 x 30 mm (^PW400, ^LL240 a 203 dpi): fuentes cuadradas H === W y 40 dots entre filas
+      if (safeSubtitle) {
+        const line1Y = Math.max(0, Math.round(12 * scale) + offY);
+        const line1Size = fitSquareFontSize(safeTitle, 20 * scale, fullRightWidth, 15 * scale);
+        const line2Y = Math.max(0, Math.round(37 * scale) + offY);
+        const line2Size = fitSquareFontSize(safeSubtitle, 17 * scale, fullRightWidth, 13 * scale);
+        zpl.push('^FO' + colT + ',' + line1Y + '^A0N,' + line1Size + ',' + line1Size + '^FD' + safeTitle + '^FS');
+        zpl.push('^FO' + colT + ',' + line2Y + '^A0N,' + line2Size + ',' + line2Size + '^FD' + safeSubtitle + '^FS');
+      } else {
+        const s26 = Math.round(26 * scale);
+        const s22 = Math.round(22 * scale);
+        if (safeTitle.length * s26 * 0.54 <= fullRightWidth) {
+          const titleY = Math.max(0, Math.round(20 * scale) + offY);
+          zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + s26 + ',' + s26 + '^FD' + safeTitle + '^FS');
+        } else if (safeTitle.length * s22 * 0.54 <= fullRightWidth) {
+          const titleY = Math.max(0, Math.round(22 * scale) + offY);
+          zpl.push('^FO' + colT + ',' + titleY + '^A0N,' + s22 + ',' + s22 + '^FD' + safeTitle + '^FS');
+        } else {
+          const maxChars = Math.max(10, Math.floor(fullRightWidth / (Math.round(20 * scale) * 0.54)));
+          const wrapped = wrapTwoLines(safeTitle, maxChars);
+          if (wrapped.length === 1) {
+            const singleY = Math.max(0, Math.round(22 * scale) + offY);
+            const singleSize = fitSquareFontSize(wrapped[0], 20 * scale, fullRightWidth, 15 * scale);
+            zpl.push('^FO' + colT + ',' + singleY + '^A0N,' + singleSize + ',' + singleSize + '^FD' + wrapped[0] + '^FS');
+          } else {
+            const longest = wrapped[0].length >= wrapped[1].length ? wrapped[0] : wrapped[1];
+            const wrapSize = fitSquareFontSize(longest, 20 * scale, fullRightWidth, 15 * scale);
+            const y1 = Math.max(0, Math.round(12 * scale) + offY);
+            const y2 = Math.max(0, Math.round(37 * scale) + offY);
+            zpl.push('^FO' + colT + ',' + y1 + '^A0N,' + wrapSize + ',' + wrapSize + '^FD' + wrapped[0] + '^FS');
+            zpl.push('^FO' + colT + ',' + y2 + '^A0N,' + wrapSize + ',' + wrapSize + '^FD' + wrapped[1] + '^FS');
+          }
+        }
+      }
+
+      const fieldSize = Math.round(19 * scale);
+      const dataRows = m.useShortLabels
+        ? [
+            { label: 'Neto:', value: safeNet },
+            { label: 'Lote:', value: safeLot },
+            { label: 'Elab.:', value: safeElab },
+            { label: 'Venc.:', value: safeExp }
+          ]
+        : [
+            { label: 'Cont. Neto:', value: safeNet },
+            { label: 'Lote:', value: safeLot },
+            { label: 'Elaboración:', value: safeElab },
+            { label: 'Vencimiento:', value: safeExp }
+          ];
+      const maxLabelChars = m.useShortLabels ? 6 : 12;
+      const labelGap = Math.round((m.useShortLabels ? 14 : 12) * scale);
+      const labelColW = Math.ceil(maxLabelChars * fieldSize * 0.54) + labelGap;
+      const colV = colT + labelColW;
+      const maxValWidth = Math.max(Math.round(60 * scale), fullRightWidth - labelColW);
+      const rowYs = [70, 110, 150, 190];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const y = Math.max(0, Math.round(rowYs[i] * scale) + offY);
+        zpl.push('^FO' + colT + ',' + y + '^A0N,' + fieldSize + ',' + fieldSize + '^FD' + dataRows[i].label + '^FS');
+        if (dataRows[i].value) {
+          const valSize = fitSquareFontSize(dataRows[i].value, fieldSize, maxValWidth, Math.round(12 * scale));
+          zpl.push('^FO' + colV + ',' + y + '^A0N,' + valSize + ',' + valSize + '^FD' + dataRows[i].value + '^FS');
+        }
+      }
+
+      zpl.push('^PQ' + copies + ',0,1,Y');
+      zpl.push('^XZ');
+
+      return {
+        zpl: zpl.join('\n') + '\n',
+        count: copies,
+        title: safeTitle,
+        metrics: m
+      };
+    }
 
     const rows = [
       { kind: 'title', label: '', value: safeTitle }
