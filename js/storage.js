@@ -1,21 +1,21 @@
 /**
  * BIPA Etiquetas · Persistencia en localStorage
- * Guarda preset de papel ("60x40" por defecto o "50x20"), calibración (203/300 dpi,
+ * Guarda preset de papel ("50x30" por defecto o "50x20"), calibración (203/300 dpi,
  * medidas, offsets, oscuridad, velocidad) y datos activos de lote.
  */
 (function (global) {
   'use strict';
 
   const KEYS = {
-    calibration: 'bipa_lotes_calibration_v2',
+    calibration: 'bipa_lotes_calibration_v3',
     lotState: 'bipa_lotes_state_v1'
   };
 
   const DEFAULT_CALIBRATION = Object.freeze({
-    paperPreset: '60x40',
+    paperPreset: '50x30',
     dpi: 203,
-    widthMm: 60,
-    heightMm: 40,
+    widthMm: 50,
+    heightMm: 30,
     offsetX: 0,
     offsetY: 0,
     darkness: 25,
@@ -55,7 +55,7 @@
   }
 
   function normalizePreset(preset) {
-    return preset === '50x20' ? '50x20' : '60x40';
+    return preset === '50x20' ? '50x20' : '50x30';
   }
 
   function loadCalibration() {
