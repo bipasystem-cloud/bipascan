@@ -1,20 +1,21 @@
 /**
- * BIPA Etiquetas de Lote · Persistencia en localStorage
- * Guarda calibración de la Zebra ZD410 (57x19 mm, 203/300 dpi, offsets, oscuridad, velocidad)
- * y los datos activos de lote (producto seleccionado, lote, elaboración y vencimiento).
+ * BIPA Etiquetas · Persistencia en localStorage
+ * Guarda preset de papel ("60x40" por defecto o "50x20"), calibración (203/300 dpi,
+ * medidas, offsets, oscuridad, velocidad) y datos activos de lote.
  */
 (function (global) {
   'use strict';
 
   const KEYS = {
-    calibration: 'bipa_lotes_calibration_v1',
+    calibration: 'bipa_lotes_calibration_v2',
     lotState: 'bipa_lotes_state_v1'
   };
 
   const DEFAULT_CALIBRATION = Object.freeze({
+    paperPreset: '60x40',
     dpi: 203,
-    widthMm: 57,
-    heightMm: 19,
+    widthMm: 60,
+    heightMm: 40,
     offsetX: 0,
     offsetY: 0,
     darkness: 25,
@@ -53,6 +54,10 @@
     return Math.min(max, Math.max(min, n));
   }
 
+  function normalizePreset(preset) {
+    return preset === '50x20' ? '50x20' : '60x40';
+  }
+
   function loadCalibration() {
     const saved = safeRead(KEYS.calibration);
     if (!saved || typeof saved !== 'object') {
@@ -60,7 +65,9 @@
     }
 
     const dpi = Number(saved.dpi) === 300 ? 300 : 203;
+    const paperPreset = normalizePreset(saved.paperPreset);
     return {
+      paperPreset: paperPreset,
       dpi: dpi,
       widthMm: clampNum(saved.widthMm, 30, 120, DEFAULT_CALIBRATION.widthMm),
       heightMm: clampNum(saved.heightMm, 12, 100, DEFAULT_CALIBRATION.heightMm),
@@ -73,6 +80,7 @@
 
   function saveCalibration(cal) {
     const sanitized = {
+      paperPreset: normalizePreset(cal.paperPreset),
       dpi: Number(cal.dpi) === 300 ? 300 : 203,
       widthMm: clampNum(cal.widthMm, 30, 120, DEFAULT_CALIBRATION.widthMm),
       heightMm: clampNum(cal.heightMm, 12, 100, DEFAULT_CALIBRATION.heightMm),

@@ -1,24 +1,38 @@
 /**
  * BIPA Etiquetas · Motor ZPL II nativo para Zebra ZD410
- * Soporta todas las plantillas extraídas de ETIQUETAS LOTES (57 x 19 mm):
- * - 'lot': Aromas (logo ancho 172/456, 5 filas), Intenciones y Pack x2 (logo compacto 138/456)
- * - 'simple': Solo Aroma, Aroma 240 g, Muestras MM y Mechas (logo ^GFA + título grande + peso opcional)
- * - 'shipping': Etiquetas de Envío (logo ^GFA + Envío a / Remite / Tel)
- * - 'barcode': Códigos de barras EAN-13 (^BEN) + CPE (formato estándar GS1, medidas o 4 por etiqueta)
+ * Soporta dos presets de papel completos y escalables a 203 dpi y 300 dpi:
+ * - Preset 1: "50x20" — Estándar (50 × 20 mm -> ^PW400 ^LL160 en 203 dpi)
+ * - Preset 2: "60x40" — Grande (60 × 40 mm -> ^PW448 ^LL320 en 203 dpi con márgenes seguros)
  */
 (function (global) {
   'use strict';
 
   const DEFAULT_LOGO_SRC = './assets/logo-bipa.png';
 
+  const PAPER_PRESETS = Object.freeze({
+    '50x20': Object.freeze({
+      id: '50x20',
+      label: 'Estándar (50 × 20 mm)',
+      widthMm: 50,
+      heightMm: 20,
+      pw203: 400,
+      ll203: 160
+    }),
+    '60x40': Object.freeze({
+      id: '60x40',
+      label: 'Grande (60 × 40 mm)',
+      widthMm: 60,
+      heightMm: 40,
+      pw203: 448,
+      ll203: 320
+    })
+  });
+
   let logoImage = null;
   let logoCropBounds = null;
   let logoLoadPromise = null;
   const gfaCache = Object.create(null);
 
-  /**
-   * Detecta el rectángulo útil (sin bordes transparentes) del logo cargado.
-   */
   function computeImageBounds(img) {
     const w = img.naturalWidth || img.width;
     const h = img.naturalHeight || img.height;
@@ -64,9 +78,6 @@
     return { x: 0, y: 0, w: w, h: h };
   }
 
-  /**
-   * Carga ./assets/logo-bipa.png una sola vez para generar el comando ^GFA en tiempo real.
-   */
   function loadLogo(src) {
     const targetSrc = src || DEFAULT_LOGO_SRC;
     if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
@@ -102,10 +113,6 @@
     Object.keys(gfaCache).forEach(function (k) { delete gfaCache[k]; });
   }
 
-  /**
-   * Convierte ./assets/logo-bipa.png a un mapa de bits de 1 bit (negro puro sobre blanco)
-   * usando un <canvas> oculto y devuelve el comando ZPL ^GFA correspondiente.
-   */
   function buildLogoGfa(targetWidthDots, targetHeightDots) {
     if (!logoImage || typeof document === 'undefined') return null;
 
@@ -217,22 +224,34 @@
     const dpi = Number(cal.dpi) === 300 ? 300 : 203;
     const dotsPerMm = dpi / 25.4;
     const scale = dpi / 203;
-    const widthMm = Number(cal.widthMm) || 57;
-    const heightMm = Number(cal.heightMm) || 19;
+    const presetId = cal.paperPreset === '50x20' ? '50x20' : '60x40';
+    const widthMm = Number(cal.widthMm) || PAPER_PRESETS[presetId].widthMm;
+    const heightMm = Number(cal.heightMm) || PAPER_PRESETS[presetId].heightMm;
 
-    const pw = Math.max(200, Math.round(widthMm * dotsPerMm));
-    const ll = Math.max(80, Math.round(heightMm * dotsPerMm));
+    let pw;
+    let ll;
+    if (widthMm === 60 && heightMm === 40) {
+      pw = Math.round(PAPER_PRESETS['60x40'].pw203 * scale);
+      ll = Math.round(PAPER_PRESETS['60x40'].ll203 * scale);
+    } else if (widthMm === 50 && heightMm === 20) {
+      pw = Math.round(PAPER_PRESETS['50x20'].pw203 * scale);
+      ll = Math.round(PAPER_PRESETS['50x20'].ll203 * scale);
+    } else {
+      pw = Math.max(200, Math.round(widthMm * dotsPerMm));
+      ll = Math.max(80, Math.round(heightMm * dotsPerMm));
+    }
 
+    const isLargePreset = presetId === '60x40' || heightMm >= 30;
     const template = data.template || 'lot';
     const category = data.category || 'aromas';
     const hasSubtitle = category === 'packx2' || Boolean(String(data.subtitle || '').trim());
     const compactLogo = template !== 'lot' || category !== 'aromas' || Boolean(data.compactLogo || hasSubtitle);
     const uniformBold = template === 'lot' && (category !== 'aromas' || Boolean(data.uniformBold));
 
-    const logoWidthRatio = template === 'lot'
-      ? (compactLogo ? (138 / 456) : (172 / 456))
-      : (146 / 456);
-    const logoMaxH = Math.round(ll * 0.84);
+    const logoWidthRatio = isLargePreset
+      ? (compactLogo ? 0.32 : 0.365)
+      : (compactLogo ? 0.305 : 0.365);
+    const logoMaxH = Math.round(ll * (isLargePreset ? 0.72 : 0.82));
     const logoAspect = logoCropBounds && logoCropBounds.h > 0
       ? (logoCropBounds.w / logoCropBounds.h)
       : 1.648;
@@ -247,6 +266,8 @@
     const previewLogoColPct = Number(((logoW / pw) * 100).toFixed(2));
 
     return {
+      paperPreset: presetId,
+      isLargePreset: isLargePreset,
       dpi: dpi,
       dotsPerMm: dotsPerMm,
       scale: scale,
@@ -280,23 +301,23 @@
     ];
   }
 
-  function buildBarcodeCellZpl(lines, data, cal, cellX, cellY, cellW, cellH, scale, isCompactCell) {
+  function buildBarcodeCellZpl(lines, data, cellX, cellY, cellW, cellH, scale, isCompactCell, isLargePreset) {
     const safeName = sanitizeZplField(data.labelTitle || data.name || 'BIPA');
     const cleanEan = String(data.ean13 || '').replace(/\D/g, '').slice(0, 13) || '7596246002876';
     const safeCpe = sanitizeZplField(data.cpe || '');
 
+    const yScale = isLargePreset && !isCompactCell ? 1.55 : 1.0;
     const padX = Math.round((isCompactCell ? 6 : 16) * scale);
-    const padY = Math.round((isCompactCell ? 3 : 8) * scale);
+    const padY = Math.round((isCompactCell ? 3 : 12) * scale * yScale);
     const innerW = Math.max(Math.round(80 * scale), cellW - padX * 2);
 
-    const nameH = Math.round((isCompactCell ? 13 : 22) * scale);
-    const nameW = fitFontWidth(safeName, (isCompactCell ? 11 : 17) * scale, innerW, Math.round(7 * scale));
+    const nameH = Math.round((isCompactCell ? 13 : 22) * scale * yScale);
+    const nameW = fitFontWidth(safeName, (isCompactCell ? 11 : 17) * scale * (isLargePreset && !isCompactCell ? 1.25 : 1), innerW, Math.round(7 * scale));
 
     const cpeText = safeCpe ? ('CPE ' + safeCpe) : '';
-    const cpeH = Math.round((isCompactCell ? 12 : 19) * scale);
-    const cpeW = fitFontWidth(cpeText, (isCompactCell ? 10 : 15) * scale, innerW, Math.round(7 * scale));
+    const cpeH = Math.round((isCompactCell ? 12 : 19) * scale * yScale);
+    const cpeW = fitFontWidth(cpeText, (isCompactCell ? 10 : 15) * scale * (isLargePreset && !isCompactCell ? 1.2 : 1), innerW, Math.round(7 * scale));
 
-    // EAN-13 tiene 95 módulos + dígitos; módulo 2 dots en estándar (190 dots) o 1 dot en celdas pequeñas
     const moduleW = isCompactCell || cellW < Math.round(230 * scale)
       ? Math.max(1, Math.round(1 * scale))
       : Math.max(2, Math.round(2 * scale));
@@ -305,10 +326,10 @@
 
     const nameY = cellY + padY;
     const cpeY = cellY + cellH - padY - cpeH;
-    const barY = nameY + nameH + Math.round((isCompactCell ? 3 : 6) * scale);
+    const barY = nameY + nameH + Math.round((isCompactCell ? 3 : 10) * scale * yScale);
     const barH = Math.max(
       Math.round((isCompactCell ? 24 : 44) * scale),
-      cpeY - barY - Math.round((isCompactCell ? 10 : 18) * scale)
+      cpeY - barY - Math.round((isCompactCell ? 10 : 22) * scale * yScale)
     );
 
     const nameX = cellX + Math.max(padX, Math.round((cellW - Math.min(innerW, safeName.length * nameW * 0.56)) / 2));
@@ -326,6 +347,7 @@
     const scale = m.scale;
     const pw = m.pw;
     const ll = m.ll;
+    const isLarge = m.isLargePreset;
     const offX = Math.round(Number(cal.offsetX) || 0);
     const offY = Math.round(Number(cal.offsetY) || 0);
     const copies = Math.max(1, Math.min(999, Math.round(Number(data.quantity) || 1)));
@@ -344,13 +366,13 @@
             buildBarcodeCellZpl(
               zpl,
               data,
-              cal,
               Math.max(0, c * halfW + offX),
               Math.max(0, r * halfH + offY),
               halfW,
               halfH,
               scale,
-              true
+              true,
+              isLarge
             );
           }
         }
@@ -362,7 +384,7 @@
         const areaH = fmt.heightMm > 0 ? Math.min(ll, Math.round(fmt.heightMm * m.dotsPerMm)) : ll;
         const startX = Math.max(0, Math.round((pw - areaW) / 2) + offX);
         const startY = Math.max(0, Math.round((ll - areaH) / 2) + offY);
-        buildBarcodeCellZpl(zpl, data, cal, startX, startY, areaW, areaH, scale, areaH < Math.round(105 * scale));
+        buildBarcodeCellZpl(zpl, data, startX, startY, areaW, areaH, scale, areaH < Math.round(105 * scale), isLarge);
       }
 
       zpl.push('^PQ' + copies + ',0,1,Y');
@@ -371,20 +393,20 @@
     }
 
     // ---- BLOQUE IZQUIERDO COMPARTIDO: LOGO ^GFA + LÍNEA DIVISORIA ^GB ----
-    const marginLeft = Math.round(2 * scale);
+    const marginLeft = Math.round((isLarge ? 10 : 4) * scale);
+    const marginRight = Math.round((isLarge ? 10 : 4) * scale);
     const logoX = Math.max(0, marginLeft + offX);
     const logoY = Math.max(0, Math.round((ll - m.logoH) / 2) + offY);
     const logoGfa = buildLogoGfa(m.logoW, m.logoH);
 
-    const dividerGap = Math.round(4 * scale);
-    const dividerThick = Math.max(2, Math.round(2 * scale));
-    const dividerPadY = Math.round(6 * scale);
+    const dividerGap = Math.round((isLarge ? 10 : 5) * scale);
+    const dividerThick = Math.max(isLarge ? 3 : 2, Math.round((isLarge ? 3 : 2) * scale));
+    const dividerPadY = Math.round((isLarge ? 18 : 6) * scale);
     const dividerX = Math.max(0, marginLeft + m.logoW + dividerGap + offX);
     const dividerY = Math.max(0, dividerPadY + offY);
     const dividerH = Math.max(20, ll - dividerPadY * 2);
 
-    const colT = Math.max(0, dividerX + dividerThick + Math.round(6 * scale));
-    const marginRight = Math.round(4 * scale);
+    const colT = Math.max(0, dividerX + dividerThick + Math.round((isLarge ? 10 : 6) * scale));
     const fullRightWidth = Math.max(
       Math.round(100 * scale),
       pw - (colT - offX) - marginRight
@@ -395,18 +417,19 @@
     }
     zpl.push('^FO' + dividerX + ',' + dividerY + '^GB' + dividerThick + ',' + dividerH + ',' + dividerThick + '^FS');
 
-    // ---- PLANTILLA SIMPLE (Solo Aroma, Aroma 240 g, Muestras MM, Mechas) ----
+    // ---- PLANTILLA SIMPLE ----
     if (m.template === 'simple') {
       const safeWeight = sanitizeZplField(data.weightText || '');
-      const titleH = Math.round((safeWeight ? 30 : 34) * scale);
-      const titleW = fitFontWidth(safeTitle, (safeWeight ? 22 : 25) * scale, fullRightWidth, Math.round(10 * scale));
+      const titleH = Math.round((isLarge ? (safeWeight ? 44 : 50) : (safeWeight ? 28 : 32)) * scale);
+      const titleW = fitFontWidth(safeTitle, (isLarge ? 30 : 22) * scale, fullRightWidth, Math.round(10 * scale));
       if (safeWeight) {
-        const wH = Math.round(24 * scale);
-        const wW = fitFontWidth(safeWeight, 19 * scale, fullRightWidth, Math.round(10 * scale));
-        const totalH = titleH + Math.round(12 * scale) + wH;
+        const wH = Math.round((isLarge ? 34 : 22) * scale);
+        const wW = fitFontWidth(safeWeight, (isLarge ? 26 : 18) * scale, fullRightWidth, Math.round(10 * scale));
+        const gapS = Math.round((isLarge ? 20 : 12) * scale);
+        const totalH = titleH + gapS + wH;
         const y0 = Math.max(Math.round(8 * scale), Math.round((ll - totalH) / 2) + offY);
         zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
-        zpl.push('^FO' + colT + ',' + (y0 + titleH + Math.round(12 * scale)) + '^A0N,' + wH + ',' + wW + '^FD' + safeWeight + '^FS');
+        zpl.push('^FO' + colT + ',' + (y0 + titleH + gapS) + '^A0N,' + wH + ',' + wW + '^FD' + safeWeight + '^FS');
       } else {
         const y0 = Math.max(Math.round(8 * scale), Math.round((ll - titleH) / 2) + offY);
         zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + titleH + ',' + titleW + '^FD' + safeTitle + '^FS');
@@ -426,14 +449,14 @@
       const line2 = 'Remite: ' + sender;
       const line3 = 'Tel: ' + phone;
 
-      const h1 = Math.round(26 * scale);
-      const w1 = fitFontWidth(line1, 19 * scale, fullRightWidth, Math.round(9 * scale));
-      const h2 = Math.round(21 * scale);
-      const w2 = fitFontWidth(line2, 16 * scale, fullRightWidth, Math.round(9 * scale));
-      const h3 = Math.round(21 * scale);
-      const w3 = fitFontWidth(line3, 16 * scale, fullRightWidth, Math.round(9 * scale));
+      const h1 = Math.round((isLarge ? 38 : 25) * scale);
+      const w1 = fitFontWidth(line1, (isLarge ? 25 : 18) * scale, fullRightWidth, Math.round(9 * scale));
+      const h2 = Math.round((isLarge ? 30 : 20) * scale);
+      const w2 = fitFontWidth(line2, (isLarge ? 21 : 15) * scale, fullRightWidth, Math.round(9 * scale));
+      const h3 = Math.round((isLarge ? 30 : 20) * scale);
+      const w3 = fitFontWidth(line3, (isLarge ? 21 : 15) * scale, fullRightWidth, Math.round(9 * scale));
 
-      const step = Math.round(36 * scale);
+      const step = Math.round((isLarge ? 58 : 34) * scale);
       const y0 = Math.max(Math.round(8 * scale), Math.round((ll - step * 3) / 2) + offY);
 
       zpl.push('^FO' + colT + ',' + y0 + '^A0N,' + h1 + ',' + w1 + '^FD' + line1 + '^FS');
@@ -444,7 +467,7 @@
       return { zpl: zpl.join('\n') + '\n', count: copies, title: line1, metrics: m };
     }
 
-    // ---- PLANTILLA LOTE (Aromas, Intenciones, Pack x2) ----
+    // ---- PLANTILLA LOTE (50x20 mm Estándar vs 60x40 mm Grande) ----
     const safeSubtitle = m.category === 'packx2' || data.subtitle
       ? sanitizeZplField(data.subtitle || '')
       : '';
@@ -467,48 +490,60 @@
     );
 
     const nRows = rows.length;
-    const heightRatio = Math.max(0.8, Math.min(1.8, m.heightMm / 19));
     const isSixRows = nRows > 5;
-    const rowStep = Math.round((isSixRows ? 23.5 : 28) * scale * heightRatio);
-    const blockH = rowStep * nRows;
-    const baseY = Math.max(Math.round(4 * scale), Math.round((ll - blockH) / 2));
 
-    let titleTargetH = 24;
-    let titleTargetW = 18;
-    let fieldTargetH = 19.5;
-    let labelCharTargetW = 15;
+    let rowStepDots;
+    let titleTargetH;
+    let titleTargetW;
+    let subTargetH;
+    let subTargetW;
+    let fieldTargetH;
+    let labelCharTargetW;
 
-    if (m.category === 'intenciones') {
-      titleTargetH = 23;
-      titleTargetW = 17.5;
-      fieldTargetH = 19.5;
-      labelCharTargetW = 14.5;
-    } else if (m.category === 'packx2' || isSixRows) {
-      titleTargetH = 20;
-      titleTargetW = 16;
-      fieldTargetH = 17;
-      labelCharTargetW = 13;
+    if (isLarge) {
+      // Preset 60 x 40 mm (320 dots de alto a 203 dpi) -> fuentes grandes y centrado amplio
+      const extraHScale = Math.max(0.75, Math.min(1.6, m.heightMm / 40));
+      rowStepDots = Math.round((isSixRows ? 39 : 46) * scale * extraHScale);
+      titleTargetH = (isSixRows ? 30 : 34) * extraHScale;
+      titleTargetW = (isSixRows ? 21 : 23) * extraHScale;
+      subTargetH = 24 * extraHScale;
+      subTargetW = 18 * extraHScale;
+      fieldTargetH = (isSixRows ? 23 : 26) * extraHScale;
+      labelCharTargetW = (isSixRows ? 17 : 19) * extraHScale;
+    } else {
+      // Preset 50 x 20 mm (160 dots de alto a 203 dpi) -> optimizado compacto sin recortes
+      const extraHScale = Math.max(0.75, Math.min(1.5, m.heightMm / 20));
+      rowStepDots = Math.round((isSixRows ? 22 : 26) * scale * extraHScale);
+      titleTargetH = (isSixRows ? 19 : 22) * extraHScale;
+      titleTargetW = (isSixRows ? 14.5 : 16.5) * extraHScale;
+      subTargetH = 16 * extraHScale;
+      subTargetW = 13 * extraHScale;
+      fieldTargetH = (isSixRows ? 16 : 18) * extraHScale;
+      labelCharTargetW = (isSixRows ? 12 : 14) * extraHScale;
     }
 
-    const titleH = Math.round(titleTargetH * scale * heightRatio);
-    const titleW = fitFontWidth(safeTitle, titleTargetW * scale * heightRatio, fullRightWidth, Math.round(9 * scale));
+    const blockH = rowStepDots * nRows;
+    const baseY = Math.max(Math.round((isLarge ? 16 : 5) * scale), Math.round((ll - blockH) / 2));
 
-    const subH = Math.round(17 * scale * heightRatio);
-    const subW = fitFontWidth(safeSubtitle, 14 * scale * heightRatio, fullRightWidth, Math.round(8 * scale));
+    const titleH = Math.round(titleTargetH * scale);
+    const titleW = fitFontWidth(safeTitle, titleTargetW * scale, fullRightWidth, Math.round(8 * scale));
 
-    const fieldH = Math.round(fieldTargetH * scale * heightRatio);
-    const labelCharW = Math.round(labelCharTargetW * scale * heightRatio);
+    const subH = Math.round(subTargetH * scale);
+    const subW = fitFontWidth(safeSubtitle, subTargetW * scale, fullRightWidth, Math.round(7 * scale));
+
+    const fieldH = Math.round(fieldTargetH * scale);
+    const labelCharW = Math.round(labelCharTargetW * scale);
 
     const labelColW = Math.min(
-      Math.round(fullRightWidth * 0.43),
-      Math.round(12 * labelCharW * 0.56) + Math.round(6 * scale)
+      Math.round(fullRightWidth * 0.44),
+      Math.round(12 * labelCharW * 0.56) + Math.round((isLarge ? 8 : 5) * scale)
     );
     const colV = colT + labelColW;
-    const maxValWidth = Math.max(Math.round(60 * scale), fullRightWidth - labelColW);
+    const maxValWidth = Math.max(Math.round(50 * scale), fullRightWidth - labelColW);
 
     for (let i = 0; i < nRows; i++) {
       const row = rows[i];
-      const y = Math.max(0, baseY + i * rowStep + offY);
+      const y = Math.max(0, baseY + i * rowStepDots + offY);
 
       if (row.kind === 'title') {
         zpl.push('^FO' + colT + ',' + y + '^A0N,' + titleH + ',' + titleW + '^FD' + row.value + '^FS');
@@ -517,8 +552,8 @@
       } else {
         zpl.push('^FO' + colT + ',' + y + '^A0N,' + fieldH + ',' + labelCharW + '^FD' + row.label + '^FS');
         if (row.value) {
-          const valBaseW = m.uniformBold ? labelCharW : Math.max(Math.round(8 * scale), labelCharW - Math.round(scale));
-          const valW = fitFontWidth(row.value, valBaseW, maxValWidth, Math.round(8 * scale));
+          const valBaseW = m.uniformBold ? labelCharW : Math.max(Math.round(7 * scale), labelCharW - Math.round(scale));
+          const valW = fitFontWidth(row.value, valBaseW, maxValWidth, Math.round(7 * scale));
           zpl.push('^FO' + colV + ',' + y + '^A0N,' + fieldH + ',' + valW + '^FD' + row.value + '^FS');
         }
       }
@@ -536,6 +571,7 @@
   }
 
   global.BipaZPL = {
+    PAPER_PRESETS: PAPER_PRESETS,
     loadLogo: loadLogo,
     setLogoSource: setLogoSource,
     buildLogoGfa: buildLogoGfa,

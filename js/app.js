@@ -137,6 +137,8 @@
     btnPrintRawbt: document.getElementById('btnPrintRawbt'),
 
     calibrationPanel: document.getElementById('calibrationPanel'),
+    btnPreset50x20: document.getElementById('btnPreset50x20'),
+    btnPreset60x40: document.getElementById('btnPreset60x40'),
     btnDpi203: document.getElementById('btnDpi203'),
     btnDpi300: document.getElementById('btnDpi300'),
     inputWidthMm: document.getElementById('inputWidthMm'),
@@ -590,6 +592,7 @@
   }
 
   function applyCalibrationToInputs() {
+    setPaperPresetButtons(calibration.paperPreset);
     setDpiButtons(calibration.dpi);
     els.inputWidthMm.value = String(calibration.widthMm);
     els.inputHeightMm.value = String(calibration.heightMm);
@@ -599,6 +602,14 @@
     els.darknessValue.textContent = String(calibration.darkness);
     els.inputSpeed.value = String(calibration.speed);
     els.speedValue.textContent = String(calibration.speed);
+  }
+
+  function setPaperPresetButtons(presetId) {
+    const is50x20 = presetId === '50x20';
+    els.btnPreset50x20.classList.toggle('is-active', is50x20);
+    els.btnPreset50x20.setAttribute('aria-checked', String(is50x20));
+    els.btnPreset60x40.classList.toggle('is-active', !is50x20);
+    els.btnPreset60x40.setAttribute('aria-checked', String(!is50x20));
   }
 
   function setDpiButtons(dpi) {
@@ -650,9 +661,10 @@
 
   function readCalibrationFromInputs() {
     calibration = BipaStorage.saveCalibration({
+      paperPreset: calibration.paperPreset,
       dpi: calibration.dpi,
-      widthMm: parseFloat(els.inputWidthMm.value) || 57,
-      heightMm: parseFloat(els.inputHeightMm.value) || 19,
+      widthMm: parseFloat(els.inputWidthMm.value) || 60,
+      heightMm: parseFloat(els.inputHeightMm.value) || 40,
       offsetX: parseInt(els.inputOffsetX.value, 10) || 0,
       offsetY: parseInt(els.inputOffsetY.value, 10) || 0,
       darkness: parseInt(els.inputDarkness.value, 10) || 25,
@@ -701,6 +713,7 @@
 
     labelEl.style.aspectRatio = calibration.widthMm + ' / ' + calibration.heightMm;
     labelEl.style.setProperty('--logo-col-w', metrics.previewLogoColPct + '%');
+    labelEl.classList.toggle('is-preset-60x40', Boolean(metrics.isLargePreset));
     labelEl.classList.toggle('has-subtitle', Boolean(subText));
     labelEl.classList.toggle('is-uniform-bold', Boolean(metrics.uniformBold));
     labelEl.classList.toggle('is-simple-template', isSimple);
@@ -1160,7 +1173,23 @@
     els.btnPrintUsb.addEventListener('click', handlePrintUsb);
     els.btnPrintRawbt.addEventListener('click', handlePrintRawbt);
 
-    // Calibración (Admin)
+    // Calibración: Presets de papel (50x20 / 60x40) y DPI (Admin)
+    [els.btnPreset50x20, els.btnPreset60x40].forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!isAdmin()) return;
+        const nextPresetId = btn.dataset.preset === '50x20' ? '50x20' : '60x40';
+        const preset = BipaZPL.PAPER_PRESETS[nextPresetId];
+        if (!preset) return;
+        calibration.paperPreset = preset.id;
+        calibration.widthMm = preset.widthMm;
+        calibration.heightMm = preset.heightMm;
+        calibration = BipaStorage.saveCalibration(calibration);
+        applyCalibrationToInputs();
+        renderLivePreview();
+        showToast('Rollo configurado: ' + preset.label);
+      });
+    });
+
     [els.btnDpi203, els.btnDpi300].forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (!isAdmin()) return;
@@ -1220,7 +1249,7 @@
       calibration = BipaStorage.resetCalibration();
       applyCalibrationToInputs();
       renderLivePreview();
-      showToast('Calibración restablecida (57 × 19 mm · 203 dpi)');
+      showToast('Calibración restablecida (60 × 40 mm · 203 dpi)');
     });
   }
 

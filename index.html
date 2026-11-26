@@ -220,7 +220,7 @@
             <span class="section-eyebrow">VISTA PREVIA EN VIVO</span>
             <h2 id="previewHeading" class="section-title">Etiqueta térmica</h2>
           </div>
-          <span id="previewMetaChip" class="meta-chip">57 × 19 mm · 203 dpi</span>
+          <span id="previewMetaChip" class="meta-chip">60 × 40 mm · 203 dpi</span>
         </div>
 
         <div class="preview-subbar">
@@ -506,6 +506,21 @@
         </summary>
 
         <div class="calibration-body">
+          <!-- Preset de papel -->
+          <div class="field">
+            <span class="field-label" id="paperPresetLabel">Tamaño de rollo (preset)</span>
+            <div id="paperPresetGroup" class="segmented segmented-compact" role="radiogroup" aria-labelledby="paperPresetLabel">
+              <button type="button" id="btnPreset50x20" class="segmented-btn" role="radio" aria-checked="false" data-preset="50x20">
+                <span class="segmented-title font-mono">50 × 20 mm</span>
+                <span class="segmented-sub">Estándar</span>
+              </button>
+              <button type="button" id="btnPreset60x40" class="segmented-btn is-active" role="radio" aria-checked="true" data-preset="60x40">
+                <span class="segmented-title font-mono">60 × 40 mm</span>
+                <span class="segmented-sub">Grande (activo)</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Resolución DPI -->
           <div class="field">
             <span class="field-label" id="dpiLabel">Resolución de impresora</span>
@@ -525,11 +540,11 @@
           <div class="field-grid field-grid-two">
             <div class="field">
               <label for="inputWidthMm" class="field-label">Ancho (mm)</label>
-              <input id="inputWidthMm" type="number" inputmode="decimal" class="field-input font-mono" value="57" min="30" max="120" step="1">
+              <input id="inputWidthMm" type="number" inputmode="decimal" class="field-input font-mono" value="60" min="30" max="120" step="1">
             </div>
             <div class="field">
               <label for="inputHeightMm" class="field-label">Alto (mm)</label>
-              <input id="inputHeightMm" type="number" inputmode="decimal" class="field-input font-mono" value="19" min="12" max="100" step="1">
+              <input id="inputHeightMm" type="number" inputmode="decimal" class="field-input font-mono" value="40" min="12" max="100" step="1">
             </div>
           </div>
 
@@ -592,7 +607,7 @@
 
           <div class="calibration-footer">
             <button id="btnResetCalibration" type="button" class="link-action link-danger">
-              Restablecer calibración (57 × 19 mm · 203 dpi)
+              Restablecer calibración (60 × 40 mm · 203 dpi)
             </button>
           </div>
         </div>
@@ -610,7 +625,7 @@
     <div class="zoom-modal-topbar">
       <div class="zoom-title-group">
         <span class="zoom-eyebrow">VISTA AMPLIADA</span>
-        <h2 id="zoomModalTitle" class="zoom-title">57 × 19 mm · 203 dpi</h2>
+        <h2 id="zoomModalTitle" class="zoom-title">60 × 40 mm · 203 dpi</h2>
       </div>
       <div class="zoom-controls">
         <button id="btnToggleRotate" type="button" class="zoom-btn" aria-pressed="false" title="Rotar etiqueta 90 grados">
